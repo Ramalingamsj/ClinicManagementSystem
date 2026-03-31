@@ -30,7 +30,6 @@ public partial class PatientMedicine
     [ValidateNever]
     public virtual User? IssuedByNavigation { get; set; }
 
-    [JsonIgnore]
     [ValidateNever]
     public virtual Medicine? Medicine { get; set; }
 

@@ -1,0 +1,429 @@
+<div class="workspace-container">
+  <!-- Elite Background Suite (Scoped) -->
+  <div class="floating-particle" style="top: 20%; left: 10%; animation-delay: 0s;">✦</div>
+  <div class="floating-particle" style="top: 60%; left: 80%; animation-delay: -5s;">✦</div>
+  <div class="floating-particle" style="top: 10%; left: 90%; animation-delay: -10s;">✦</div>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <!-- Header Section: Reception Hub -->
+  <header class="workspace-header no-print">
+    <div class="title-group">
+      <div class="reception-badge pulse-light">
+        <i class="fas fa-concierge-bell"></i>
+        Receptionist Hub
+      </div>
+      <h1>Workstation Overview</h1>
+      <p>Managing clinical appointments and patient registrations</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchQuery" (input)="onSearch()"
+          placeholder="Search patient name or contact info...">
+      </div>
+      <button class="btn-refresh" (click)="loadPatients()" [class.spinning]="loadingPatients">
+        <i class="fas fa-sync-alt"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="workspace-body animate-fade-in no-print">
+
+    <!-- Patient Registry View -->
+    <div class="tab-content">
+      <div class="action-bar header-section">
+        <button class="add-patient-btn premium-btn" (click)="openAddPatient()">
+          <i class="fas fa-user-plus"></i> New Registration
+        </button>
+      </div>
+
+      <div class="patient-grid">
+        <div class="patient-card glass-panel animate-slide-up" *ngFor="let p of patients; let i = index"
+          [style.--i]="i">
+          <div class="card-header">
+            <div class="avatar">{{ p.patientName[0].toUpperCase() }}</div>
+            <div class="name-group">
+              <h3>{{ p.patientName }}</h3>
+              <span class="pid">ID: #PAT-{{ p.patientId }}</span>
+            </div>
+            <button class="edit-icon" (click)="openEditPatient(p)"><i class="fas fa-user-edit"></i></button>
+          </div>
+
+          <div class="card-body">
+            <div class="info-row"><i class="fas fa-phone-alt"></i> {{ p.contact }}</div>
+            <div class="info-row"><i class="fas fa-envelope-open-text"></i> {{ p.email || 'No email provided' }}</div>
+            <div class="info-row"><i class="fas fa-map-marked-alt"></i> {{ p.address || 'No address' }}</div>
+          </div>
+
+          <div class="card-footer" style="border-top: 1px solid #f1f5f9; padding-top: 20px; margin-top: 20px;">
+            <button class="book-shortcut premium-btn" (click)="initiateBooking(p)" style="width: 100%;">
+              <i class="fas fa-calendar-plus"></i> Book Consultation
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Global Viewport Modals (cover complete page) -->
+
+<!-- Appointment Scheduling Wizard (New Modern Split-Column Design) -->
+<div class="modal-overlay no-print" *ngIf="activeTab === 'booking'">
+  <div class="modal-content glass-panel animate-modal-in"
+    style="max-width: 800px; display: flex; flex-direction: row; padding: 0; overflow: hidden;">
+
+    <!-- Left Sidebar: Context & Summary -->
+    <div class="modal-context-sidebar"
+      style="flex: 0 0 300px; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%); border-right: 1px solid rgba(226, 232, 240, 0.4); padding: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
+      <div class="sidebar-header">
+        <h2 style="font-size: 1.5rem; letter-spacing: -0.02em; line-height: 1.2;">Consultation Scheduling</h2>
+        <p style="font-size: 0.85rem; color: #64748b; font-weight: 600; margin-top: 8px;">Finalizing clinical entry</p>
+      </div>
+
+      <div class="patient-preview"
+        style="background: white; padding: 1.5rem; border-radius: 20px; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.05); border: 1px solid rgba(79, 70, 229, 0.1);">
+        <span
+          style="font-size: 0.65rem; font-weight: 900; text-transform: uppercase; color: #4f46e5; letter-spacing: 0.1em;">Patient
+          Name</span>
+        <h3 style="margin: 4px 0 0 0; font-size: 1.25rem; font-weight: 950; color: #1e293b;">{{ bookingPatientName }}
+        </h3>
+      </div>
+
+      <div class="doctor-badge-area" *ngIf="selectedDoctorId > 0"
+        style="margin-top: auto; padding-top: 2rem; border-top: 1px dashed rgba(203, 213, 225, 0.5);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div
+            style="width: 40px; height: 40px; background: #4f46e5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+            <i class="fas fa-user-shield"></i>
+          </div>
+          <div>
+            <p style="margin: 0; font-size: 0.85rem; font-weight: 800; color: #1e293b;">Clinical Lead</p>
+            <p style="margin: 0; font-size: 0.75rem; color: #64748b; font-weight: 600;">{{ currentUser?.fullName ||
+              'Active Receptionist' }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Area: Interaction Form -->
+    <div class="modal-form-main" style="flex: 1; display: flex; flex-direction: column;">
+      <div class="modal-header" style="justify-content: flex-end; padding: 1.5rem 2rem;">
+        <button class="close-btn" (click)="setTab('patients')">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 1rem 3rem 2rem 3rem;">
+        <div class="form-grid">
+          <div class="form-group full-width" style="margin-bottom: 24px; position: relative;">
+            <label
+              style="color: #475569; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 12px; display: block;">
+              Select Medical Practitioner <span class="required">*</span>
+            </label>
+
+            <!-- Elite Search-Select Implementation -->
+            <div class="custom-dropdown" [class.active]="showDoctorDropdown">
+              <div class="dropdown-trigger elite-input" (click)="showDoctorDropdown = !showDoctorDropdown"
+                style="height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: white;">
+                <span [style.color]="selectedDoctorId === 0 ? '#94a3b8' : '#1e293b'">{{ getSelectedDoctorName()
+                  }}</span>
+                <i class="fas fa-chevron-down" [style.transform]="showDoctorDropdown ? 'rotate(180deg)' : 'none'"
+                  style="transition: transform 0.3s; color: #94a3b8;"></i>
+              </div>
+
+              <div class="dropdown-menu glass-panel animate-fade-in" *ngIf="showDoctorDropdown">
+                <div class="search-wrap" style="padding: 10px; border-bottom: 1px solid rgba(226, 232, 240, 0.4);">
+                  <div class="search-inner" style="position: relative;">
+                    <i class="fas fa-search"
+                      style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.8rem;"></i>
+                    <input type="text" [(ngModel)]="doctorSearchTerm" placeholder="Filter clinicians by name or dept..."
+                      style="width: 100%; height: 40px; padding: 0 10px 0 35px; border-radius: 10px; border: 1px solid #e2e8f0; outline: none; font-size: 0.9rem;"
+                      (click)="$event.stopPropagation()">
+                  </div>
+                </div>
+                <div class="options-list" style="max-height: 250px; overflow-y: auto;">
+                  <div class="option-item" *ngFor="let d of filteredDoctors" (click)="selectDoctor(d)">
+                    <div class="doc-icon"><i class="fas fa-user-md"></i></div>
+                    <div class="doc-info">
+                      <span class="doc-name">Dr. {{ d.fullName }}</span>
+                      <span class="doc-dept">{{ d.specialization }}</span>
+                    </div>
+                  </div>
+                  <div class="no-results" *ngIf="filteredDoctors.length === 0"
+                    style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+                    No clinicians matching your search criteria.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label
+              style="color: #475569; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 12px; display: block;">
+              Visit Date <span class="required">*</span>
+            </label>
+            <input type="date" [(ngModel)]="selectedDate" (change)="onDoctorOrDateChange()" class="elite-input"
+              [min]="selectedDate" style="height: 56px; border-radius: 16px;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label
+              style="color: #475569; font-weight: 800; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 12px; display: block;">
+              Availability <span class="required">*</span>
+            </label>
+            <select [(ngModel)]="selectedSlotId" class="elite-select" [disabled]="slots.length === 0"
+              style="height: 56px; border-radius: 16px;">
+              <option [value]="0">{{ slots.length === 0 ? 'Waiting for Selection...' : 'Choose a Slot...' }}</option>
+              <option *ngFor="let s of slots" [value]="s.slotId">
+                Token #{{ s.tokenNo }} | {{ s.slotTime }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="empty-state animate-fade-in" *ngIf="slots.length === 0 && selectedDoctorId > 0 && selectedDate"
+          style="text-align: center; padding: 24px; background: rgba(248, 250, 252, 0.4); border-radius: 16px; border: 2px dashed rgba(203, 213, 225, 0.6);">
+          <i class="fas fa-clock" style="font-size: 1.5rem; color: #cbd5e1; margin-bottom: 8px;"></i>
+          <p style="color: #64748b; font-weight: 700; font-size: 0.85rem; margin: 0;">No slots remain for this clinician
+            on this date.</p>
+        </div>
+      </div>
+
+      <div class="modal-footer"
+        style="margin-top: auto; padding: 2rem 3rem; background: rgba(248, 250, 252, 0.4); display: flex; justify-content: flex-end; gap: 1rem;">
+        <button class="btn-secondary" (click)="setTab('patients')"
+          style="font-weight: 800; font-size: 0.8rem; color: #94a3b8;">DISCARD</button>
+        <button class="btn-submit premium-btn" [disabled]="!selectedSlotId || isBooking || !bookingPatientId"
+          (click)="confirmBooking()" style="height: 56px; padding: 0 40px; border-radius: 16px; min-width: 200px;">
+          <i class="fas" [class.fa-spinner-third]="isBooking" [class.fa-spin]="isBooking"
+            [class.fa-check-circle]="!isBooking" style="margin-right: 12px;"></i>
+          {{ isBooking ? 'Authorizing...' : 'CONFIRM' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Patient Registration Modal (Elite Clinical Redesign) -->
+<div class="modal-overlay no-print" *ngIf="showPatientModal">
+  <div class="modal-content glass-panel animate-modal-in"
+    style="max-width: 940px; width: 95%; max-height: 90vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+    <div class="modal-layout" style="display: flex; flex: 1; min-height: 0; overflow: hidden;">
+
+      <!-- Left Sidebar: Identity Management -->
+      <div class="modal-sidebar-info"
+        style="width: 320px; background: rgba(79, 70, 229, 0.03); padding: 3rem; display: flex; flex-direction: column; border-right: 1px solid rgba(203, 213, 225, 0.4);">
+        <div class="modal-icon-badge"
+          style="width: 80px; height: 80px; background: white; border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #4f46e5; margin-bottom: 2rem; box-shadow: 0 20px 25px -5px rgba(79, 70, 229, 0.1);">
+          <i class="fas" [class.fa-user-plus]="!editingPatient" [class.fa-user-edit]="editingPatient"></i>
+        </div>
+
+        <h2 style="font-size: 1.75rem; font-weight: 900; color: #1e293b; margin-bottom: 1rem; line-height: 1.2;">
+          {{ editingPatient ? 'Update Profile' : 'Identity Management' }}
+        </h2>
+        <p style="color: #64748b; font-size: 0.95rem; font-weight: 500; line-height: 1.6; margin-bottom: 2rem;">
+          Registering official patient records for clinical consultation and long-term health tracking.
+        </p>
+
+        <div class="clinical-check-list" style="margin-top: 1rem;">
+          <div
+            style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; color: #4f46e5; font-weight: 700; font-size: 0.85rem;">
+            <i class="fas fa-check-circle"></i> Identity Verified
+          </div>
+          <div
+            style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; color: #4f46e5; font-weight: 700; font-size: 0.85rem;">
+            <i class="fas fa-check-circle"></i> GDPR Compliant
+          </div>
+        </div>
+
+        <div class="receptionist-badge"
+          style="margin-top: auto; padding-top: 2rem; border-top: 1px dashed rgba(203, 213, 225, 0.6);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div
+              style="width: 36px; height: 36px; background: #1e293b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1rem;">
+              <i class="fas fa-id-badge"></i>
+            </div>
+            <div>
+              <p style="margin: 0; font-size: 0.8rem; font-weight: 800; color: #1e293b;">Receptionist Hub</p>
+              <p style="margin: 0; font-size: 0.7rem; color: #64748b; font-weight: 600;">{{ currentUser?.fullName ||
+                'Active Registrar' }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Area: Profile Form -->
+      <div class="modal-form-main" style="flex: 1; display: flex; flex-direction: column;">
+        <div class="modal-header" style="justify-content: flex-end; padding: 1.5rem 2rem; border: none;">
+          <button class="close-btn" (click)="showPatientModal = false">&times;</button>
+        </div>
+
+        <form #patientForm="ngForm" (ngSubmit)="savePatient(patientForm)"
+          style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+          <div class="modal-body" style="padding: 0 4rem 3rem 4rem; overflow-y: auto; flex: 1;">
+            <div class="form-header-title" style="margin-bottom: 2.5rem;">
+              <h3 style="font-size: 1.25rem; font-weight: 800; color: #1e293b; margin-bottom: 0.5rem;">Patient Specifics
+              </h3>
+              <p style="color: #94a3b8; font-size: 0.85rem; font-weight: 500;">Please ensure all fields marked with an
+                asterisk are accurate.</p>
+            </div>
+
+            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.75rem;">
+              <div class="form-group full-width" style="grid-column: span 2;">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Legal
+                  Name <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="(editingPatient || newPatient).patientName" name="patientName" required
+                  #pname="ngModel" class="elite-input" style="height: 56px; border-radius: 16px;"
+                  [ngClass]="{'is-invalid': pname.invalid && (pname.dirty || pname.touched || patientForm.submitted)}"
+                  pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$" placeholder="Enter full name (e.g. John Doe)">
+                <div *ngIf="pname.invalid && (pname.dirty || pname.touched || patientForm.submitted)"
+                  class="invalid-feedback">
+                  Name is required and cannot start with space/number.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Gender
+                  Alignment <span class="required">*</span></label>
+                <select [(ngModel)]="(editingPatient || newPatient).gender" name="gender" required #pgender="ngModel"
+                  class="elite-select" style="height: 56px; border-radius: 16px;"
+                  [ngClass]="{'is-invalid': pgender.invalid && (pgender.dirty || pgender.touched || patientForm.submitted)}">
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other / Non-Binary</option>
+                </select>
+                <div *ngIf="pgender.invalid && (pgender.dirty || pgender.touched || patientForm.submitted)"
+                  class="invalid-feedback">
+                  Please select a gender.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Date
+                  of Birth <span class="required">*</span></label>
+                <input type="date" [(ngModel)]="(editingPatient || newPatient).dob" name="dob" required #pdob="ngModel"
+                  class="elite-input" style="height: 56px; border-radius: 16px;"
+                  [ngClass]="{'is-invalid': pdob.invalid && (pdob.dirty || pdob.touched || patientForm.submitted)}">
+                <div *ngIf="pdob.invalid && (pdob.dirty || pdob.touched || patientForm.submitted)"
+                  class="invalid-feedback">
+                  Date of birth is required.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Primary
+                  Contact <span class="required">*</span></label>
+                <input type="text" [(ngModel)]="(editingPatient || newPatient).contact" name="contact" required
+                  #pcontact="ngModel" class="elite-input" style="height: 56px; border-radius: 16px;"
+                  [ngClass]="{'is-invalid': pcontact.invalid && (pcontact.dirty || pcontact.touched || patientForm.submitted)}"
+                  pattern="^[6-9][0-9]{9}$" placeholder="10-digit mobile number">
+                <div *ngIf="pcontact.invalid && (pcontact.dirty || pcontact.touched || patientForm.submitted)"
+                  class="invalid-feedback">
+                  Contact must be 10 digits and start with 6, 7, 8, or 9.
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Email
+                  Profile</label>
+                <input type="email" [(ngModel)]="(editingPatient || newPatient).email" name="email" #pemail="ngModel"
+                  class="elite-input" style="height: 56px; border-radius: 16px;" placeholder="patient@email.com" email
+                  [ngClass]="{'is-invalid': pemail.invalid && (pemail.dirty || pemail.touched)}">
+                <div *ngIf="pemail.invalid && (pemail.dirty || pemail.touched)" class="invalid-feedback">
+                  Please enter a valid email.
+                </div>
+              </div>
+
+              <div class="form-group full-width" style="grid-column: span 2;">
+                <label
+                  style="color: #475569; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 10px; display: block;">Residential
+                  Locality</label>
+                <textarea [(ngModel)]="(editingPatient || newPatient).address" name="address" #paddress="ngModel"
+                  class="elite-input" style="height: 80px; border-radius: 16px; resize: none; padding-top: 15px;"
+                  pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$" placeholder="Full street address..."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer"
+            style="margin-top: auto; padding: 2rem 4rem; background: rgba(248, 250, 252, 0.4); display: flex; justify-content: flex-end; gap: 1rem;">
+            <button type="button" class="btn-secondary" (click)="showPatientModal = false"
+              style="font-weight: 800; font-size: 0.8rem; color: #94a3b8;">DISCARD</button>
+            <button type="submit" class="btn-submit premium-btn"
+              style="height: 56px; padding: 0 40px; border-radius: 16px; min-width: 220px;">
+              <i class="fas fa-check-circle" style="margin-right: 12px;"></i>
+              {{ editingPatient ? 'UPDATE PROFILE' : 'AUTHORIZE REGISTRY' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Elite Clinical Modal (Solid Style Notification) -->
+<div class="modal-overlay no-print" *ngIf="showModal">
+  <div class="modal-content solid-modal animate-modal-in" style="max-width: 450px; text-align: center;">
+    <div class="modal-header">
+      <h2>{{ modalTitle }}</h2>
+      <button class="close-btn" (click)="closeModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <div class="modal-icon" [ngClass]="modalType" style="font-size: 4rem; margin-bottom: 24px;">
+        <i class="fas" [ngClass]="modalIcon"></i>
+      </div>
+      <p class="modal-message" style="color: #64748b; font-weight: 600; line-height: 1.6; font-size: 1.1rem;">
+        {{ modalMessage }}
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-modal-primary premium-btn" [ngClass]="modalType" (click)="closeModal()" style="width: 100%;">
+        Confirm & Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Print-Only Layout -->
+<div class="print-layout" id="print-section" *ngIf="billDetails">
+  <div class="receipt-card" style="padding: 40px; border: 2px solid #000; font-family: 'Inter', sans-serif;">
+    <div class="invoice-header" style="text-align: center;">
+      <h2 style="font-weight: 900; text-transform: uppercase;">ClinicSys Medical Center</h2>
+      <p style="margin-top: 4px; font-weight: 700;">RECEPTION DESK - OFFICIAL CONSULTATION RECEIPT</p>
+    </div>
+    <hr style="margin: 24px 0; border: 1px solid #000;">
+    <div class="invoice-meta" style="display: flex; justify-content: space-between; margin-bottom: 32px;">
+      <p><strong>Receipt ID:</strong> #RC-{{ billDetails.appointmentId }}</p>
+      <p><strong>Print Date:</strong> {{ activeDate | date:'medium' }}</p>
+    </div>
+    <div class="invoice-body">
+      <p style="margin-bottom: 12px;"><strong>Patient Name:</strong> {{ billDetails.patientName }}</p>
+      <p style="margin-bottom: 12px;"><strong>Department:</strong> {{ billDetails.specialization }}</p>
+      <p style="margin-bottom: 12px;"><strong>Assigned Consultant:</strong> Dr. {{ billDetails.doctorName }}</p>
+      <br>
+      <div class="total-bar"
+        style="border: 2px solid #000; padding: 20px; display: flex; justify-content: space-between; font-size: 1.5rem;">
+        <strong>Consultation Total:</strong>
+        <strong>₹{{ billDetails.consultationFee | number:'1.2-2' }}</strong>
+      </div>
+    </div>
+    <p class="footer-msg" style="margin-top: 40px; font-size: 0.8rem; text-align: center;">
+      This is an electronic receipt generated by ClinicSys for patient record purposes.
+    </p>
+  </div>
+</div>

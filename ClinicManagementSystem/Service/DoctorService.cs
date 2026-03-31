@@ -1,6 +1,8 @@
 using ClinicManagementSystem.Models;
 using ClinicManagementSystem.Repository;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ClinicManagementSystem.Service
 {
@@ -32,6 +34,11 @@ namespace ClinicManagementSystem.Service
             return await _repository.GetPatientHistoryRepository(patientId, doctorId);
         }
 
+        public async Task<Appointment> GetAppointmentByIdService(int appointmentId)
+        {
+            return await _repository.GetAppointmentByIdRepository(appointmentId);
+        }
+
         public async Task<PatientMedicine> AddPrescriptionService(int consultationId, PatientMedicine medicine)
         {
             return await _repository.AddPrescriptionRepository(consultationId, medicine);
@@ -45,6 +52,21 @@ namespace ClinicManagementSystem.Service
         public async Task<Consultation> GetConsultationDetailsService(int consultationId)
         {
             return await _repository.GetConsultationDetailsRepository(consultationId);
+        }
+
+        public async Task<Consultation> GetConsultationByAppointmentService(int appointmentId)
+        {
+            return await _repository.GetConsultationByAppointmentRepository(appointmentId);
+        }
+
+        public async Task<IEnumerable<Medicine>> GetAllMedicinesService()
+        {
+            return await _repository.GetAllMedicinesRepository();
+        }
+
+        public async Task<IEnumerable<LabTest>> GetAllLabTestsService()
+        {
+            return await _repository.GetAllLabTestsRepository();
         }
 
         public async Task<PatientMedicine> EditPrescriptionService(int patientMedicineId, PatientMedicine medicine)
@@ -66,5 +88,11 @@ namespace ClinicManagementSystem.Service
         {
             return await _repository.DeleteLabTestRepository(patientLabtestId);
         }
+
+        public async Task<IEnumerable<dynamic>> GetDoctorHistoryService(int doctorId)
+        {
+            return await _repository.GetDoctorHistoryRepository(doctorId);
+        }
     }
 }
+

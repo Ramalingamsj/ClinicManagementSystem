@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Prescription</title>
+    <style>
+        :root {
+            --primary: hsl(210, 70%, 55%);
+            --bg: hsl(210, 30%, 12%);
+            --card-bg: hsla(210, 30%, 20%, 0.6);
+            --text: hsl(0, 0%, 95%);
+            --accent: hsl(340, 70%, 55%);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+        }
+
+        label {
+            display: block;
+            margin-top: 1rem;
+            font-weight: 600;
+        }
+
+        select,
+        button {
+            width: 100%;
+            padding: 0.6rem;
+            margin-top: 0.4rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        select {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        button {
+            background: var(--primary);
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: var(--accent);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h2>Add Prescription</h2>
+        <form id="prescriptionForm">
+            <input type="hidden" id="consultationId" name="consultationId" value="" />
+            <label for="medicineSelect">Medicine</label>
+            <select id="medicineSelect" name="medicineId" required>
+                <option value="" disabled selected>Select a medicine</option>
+            </select>
+
+            <label for="labTestSelect">Lab Test</label>
+            <select id="labTestSelect" name="labTestId" required>
+                <option value="" disabled selected>Select a lab test</option>
+            </select>
+
+            <button type="submit">Save Prescription</button>
+        </form>
+    </div>
+
+    <script>
+        // Helper to get query parameters
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        async function loadOptions() {
+            // Populate medicines
+            try {
+                const medRes = await fetch('/api/Doctor/GetAllMedicines');
+                const meds = await medRes.json();
+                const medSelect = document.getElementById('medicineSelect');
+                meds.forEach(m => {
+                    const opt = document.createElement('option');
+                    // Use model property names
+                    opt.value = m.medicineId ?? m.id; // fallback to id if present
+                    opt.textContent = m.medicineName ?? m.name;
+                    medSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load medicines', e);
+            }
+
+            // Populate lab tests
+            try {
+                const labRes = await fetch('/api/Doctor/GetAllLabTests');
+                const labs = await labRes.json();
+                const labSelect = document.getElementById('labTestSelect');
+                labs.forEach(l => {
+                    const opt = document.createElement('option');
+                    // Use model property names
+                    opt.value = l.labtestId ?? l.id; // fallback to id if present
+                    opt.textContent = l.testName ?? l.name;
+                    labSelect.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Failed to load lab tests', e);
+            }
+        }
+
+        document.getElementById('prescriptionForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const consultationId = document.getElementById('consultationId').value;
+            const medicineId = document.getElementById('medicineSelect').value;
+            const labTestId = document.getElementById('labTestSelect').value;
+
+            // Submit medicine
+            if (medicineId) {
+                await fetch(`/api/Doctor/AddMedicine/${consultationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ medicineId })
+                });
+            }
+            // Submit lab test
+            if (labTestId) {
+                await fetch(`/api/Doctor/AddLabTest/${consultationId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ labTestId })
+                });
+            }
+            alert('Prescription saved');
+        });
+
+        // Initialize page
+        const consultationIdFromUrl = getQueryParam('consultationId');
+        if (consultationIdFromUrl) {
+            document.getElementById('consultationId').value = consultationIdFromUrl;
+        }
+        loadOptions();
+    </script>
+</body>
+
+</html>

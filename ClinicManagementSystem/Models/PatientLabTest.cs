@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace ClinicManagementSystem.Models;
 
@@ -23,7 +24,7 @@ public partial class PatientLabTest
     [JsonIgnore]
     public virtual Consultation? Consultation { get; set; }
 
-    [JsonIgnore]
+    [ValidateNever]
     public virtual LabTest? Labtest { get; set; }
 
     public virtual Status? Status { get; set; }

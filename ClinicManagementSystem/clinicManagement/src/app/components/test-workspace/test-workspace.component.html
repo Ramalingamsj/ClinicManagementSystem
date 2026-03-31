@@ -1,0 +1,302 @@
+<div class="workspace-container">
+  <!-- Dynamic Background Elements -->
+  <div class="floating-particle" style="top: 15%; left: 10%; animation-delay: -3s;">✦</div>
+  <div class="floating-particle" style="top: 75%; left: 85%; animation-delay: -7s;">✦</div>
+  <div class="floating-particle" style="top: 45%; left: 20%; animation-delay: -14s;">✦</div>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2 :blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <!-- Header -->
+
+  <div class="header-content">
+
+    <div class="patient-title">
+      <h1>{{ patientName || 'Loading Patient Details...' }}</h1>
+      <span class="status-badge" [ngClass]="{'badge-success': allCompleted, 'badge-warning': !allCompleted}">
+        {{ allCompleted ? 'All Tests Verified' : 'Pending Results Entry' }}
+      </span>
+      <span class="patient-phone" *ngIf="patientPhone">
+        <i class="fas fa-phone-alt"></i> {{ patientPhone }}
+      </span>
+    </div>
+
+  </div>
+
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="spinner-container">
+    <div class="spinner"></div>
+    <p>Synchronizing laboratory requirements...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="alert alert-danger error-box no-print" style="margin-bottom: 2rem;">
+    {{ error }}
+  </div>
+
+  <!-- Success Group (Finalized State) -->
+  <div *ngIf="allCompleted && !loading" class="success-group animate-slide-up">
+    <!-- Success Banner (Green if pending bill, Blue if billed) -->
+    <div class="success-banner" [ngClass]="{'billed': generatedBill}">
+      <div class="banner-main">
+        <div class="success-icon">
+          <i class="fas fa-check-double" style="font-size: 1.5rem;"></i>
+        </div>
+        <div class="success-text">
+          <h3>{{ generatedBill ? 'Laboratory Transaction Finalized' : 'Results Entry Complete' }}</h3>
+          <p>{{ generatedBill ? 'The official laboratory report and invoice have been generated.' : 'All analytical
+            parameters have been recorded. You can now finalize the billing.' }}</p>
+        </div>
+      </div>
+
+      <div class="banner-actions">
+        <!-- Generate Bill Button (only if not already billed) -->
+        <button *ngIf="!generatedBill" class="premium-btn" [disabled]="generatingBill" (click)="generateBill()">
+          <i class="fas fa-file-invoice-dollar"></i>
+          {{ generatingBill ? 'Generating...' : 'Finalize & Generate Bill' }}
+        </button>
+
+        <!-- Bill Stats & Print (only if billed) -->
+        <div *ngIf="generatedBill" class="bill-stats">
+          <div class="amount-tag">
+            <span class="label">Total Lab Charges</span>
+            <span class="value">${{ generatedBill.totalAmount | number:'1.2-2' }}</span>
+          </div>
+          <button class="pdf-btn" (click)="printBill()">
+            <i class="fas fa-print" style="margin-right: 8px;"></i>
+            Print Official Report
+          </button>
+
+          <!-- Summary SMS Button -->
+          <button class="sms-summary-btn" (click)="sendSummarySMS()" [disabled]="sendingSummarySms">
+            <i class="fas" [ngClass]="sendingSummarySms ? 'fa-spinner fa-spin' : 'fa-mobile-alt'"></i>
+            {{ sendingSummarySms ? 'Transmitting...' : 'Send Summary SMS' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed Laboratory Report Card (Visible after billing) -->
+    <div *ngIf="generatedBill" class="bill-details-card animate-fade-in no-print">
+      <div class="card-header">
+        <div class="title-group">
+          <i class="fas fa-clipboard-list" style="font-size: 1.25rem;"></i>
+          <h4>Detailed Diagnostic Summary</h4>
+        </div>
+        <span class="invoice-no">#LAB-INV-{{ consultationId }}-{{ generatedBill.appointmentId }}</span>
+      </div>
+
+      <div class="bill-table-wrapper">
+        <table class="bill-table">
+          <thead>
+            <tr>
+              <th>Diagnostic Parameter</th>
+              <th>Reference Type</th>
+              <th class="text-right">Unit Charge</th>
+              <th class="text-right">Total Charge</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let test of labTests">
+              <td>
+                <div class="test-name-cell">
+                  <strong>{{ test.testName }}</strong>
+                  <span>Analytical Diagnostic</span>
+                </div>
+              </td>
+              <td>In-Vitro Verification</td>
+              <td class="text-right">$ {{ test.price || 0 | number:'1.2-2' }}</td>
+              <td class="text-right"><strong>$ {{ test.price || 0 | number:'1.2-2' }}</strong></td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-right" style="font-weight: 700; color: #64748b;">Subtotal Charges</td>
+              <td class="text-right amount-total">$ {{ generatedBill.totalAmount | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Primary Lab Tests Queue (Visible during processing) -->
+  <main class="workspace-body no-print" *ngIf="!loading && !error && labTests.length > 0 && !generatedBill">
+    <div class="section-title">
+      <h3>Laboratory Diagnostic Procedures</h3>
+      <p class="section-desc">Record individual analytical findings for each requested test below. Verification is
+        real-time.</p>
+    </div>
+
+    <div class="medicine-list">
+      <div class="medicine-item" *ngFor="let test of labTests; let i = index" [style.--i]="i"
+        [ngClass]="{'issued-item': test.statusId === 2}">
+
+
+        <div class="med-info">
+          <div class="med-icon">
+            <i class="fas fa-microscope"></i>
+          </div>
+          <div class="med-details">
+            <h4>{{ test.testName }}</h4>
+            <span class="meta-pill">Automated Diagnostic</span>
+          </div>
+        </div>
+
+
+        <div class="med-stats">
+          <!-- Dynamic Form for Schema-based or Generic Analytical Findings -->
+          <div class="parameters-grid" *ngIf="test.statusId !== 2">
+            <div class="parameter-field" *ngFor="let field of getTestSchema(test.testName)">
+              <label>{{ field }}</label>
+              <input [type]="isNumericField(field) ? 'number' : 'text'"
+                [(ngModel)]="testFieldsMap[test.patientLabtestId][field]"
+                (ngModelChange)="onFieldChange(test.patientLabtestId)" class="premium-input-sm"
+                [placeholder]="'Enter ' + field" [disabled]="test._saving"
+                [class.invalid-field]="isFieldInvalid(test.patientLabtestId, field)">
+            </div>
+          </div>
+
+          <!-- Professional Display for Verified Records -->
+          <div class="stat-block" *ngIf="test.statusId === 2">
+            <span class="stat-label">Verified Analytical Record</span>
+            <div class="verified-summary-grid">
+               <div class="summary-pill" *ngFor="let part of (test.inputResult || '').split('|')">
+                 <i class="fas fa-microscope" style="font-size: 0.7rem; color: #6366f1;"></i>
+                 <span>{{ part.trim() }}</span>
+               </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="med-action">
+          <div class="validation-tip" *ngIf="test.statusId !== 2 && isTestFormInvalid(test)"
+            style="color: #ef4444; font-size: 0.75rem; font-weight: 750; margin-bottom: 8px; display: flex; align-items: center; gap: 4px;">
+            <i class="fas fa-exclamation-circle"></i>
+            <span *ngIf="hasSpecialCharacters(test.patientLabtestId); else emptyFields">No special characters allowed
+              (e.g. | <>)</span>
+            <ng-template #emptyFields>Complete all fields</ng-template>
+          </div>
+          <button class="premium-btn" *ngIf="test.statusId !== 2" [disabled]="test._saving || isTestFormInvalid(test)"
+            (click)="saveResult(test.patientLabtestId)" style="padding: 0.6rem 1.2rem; font-size: 0.85rem;"
+            [style.opacity]="isTestFormInvalid(test) ? '0.5' : '1'">
+            <i class="fas" [class.fa-spinner]="test._saving" [class.fa-spin]="test._saving"></i>
+            {{ test._saving ? 'Synchronizing...' : 'Verify Result' }}
+          </button>
+
+          <div class="issued-badge" *ngIf="test.statusId === 2" style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <i class="fas fa-check-circle" style="color: #10b981;"></i>
+              Verified
+            </div>
+
+            <button class="sms-pill-btn" (click)="sendSmsForTest(test)"
+              [disabled]="sendingSmsMap[test.patientLabtestId]" title="Notify Patient via SMS"
+              style="margin-left: 10px; background: #e0e7ff; color: #4338ca; border: none; padding: 4px 12px; border-radius: 100px; font-size: 0.75rem; font-weight: 750; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.2s;">
+              <i class="fas"
+                [ngClass]="sendingSmsMap[test.patientLabtestId] ? 'fa-spinner fa-spin' : 'fa-comment-alt'"></i>
+              {{ sendingSmsMap[test.patientLabtestId] ? 'Sending...' : 'Send SMS' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && !error && labTests.length === 0" class="workspace-body animate-fade-in"
+    style="text-align: center; padding: 4rem;">
+    <i class="fas fa-vials" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1.5rem;"></i>
+    <h2>No Diagnostic Data</h2>
+    <p style="color: #64748b;">There are no specific lab tests associated with this consultation record.</p>
+    <button class="back-btn" (click)="goBack()" style="margin-top: 1.5rem;">Return to Clinical Queue</button>
+  </div>
+
+  <!-- Print Layout (Hidden in UI, matched with Pharmacy Invoice Style) -->
+  <div class="print-layout" id="printable-invoice">
+    <div class="print-header">
+      <div class="clinic-info">
+        <h2 style="color: #4f46e5; margin-bottom: 5px;">ClinicSys Diagnostic Center</h2>
+        <p>Advanced Clinical Laboratory & Research Facility</p>
+        <p>Authorized Verification Center | ISO 9001:2015</p>
+        <p style="margin-top: 10px;"><strong>Laboratory ID:</strong> LAB-C-{{ labUserId }}</p>
+      </div>
+      <div class="invoice-meta" style="text-align: right;">
+        <h1 style="font-size: 32px; color: #1e293b; margin: 0;">LAB REPORT</h1>
+        <p><strong>Verification Date:</strong> {{ today | date:'mediumDate' }}</p>
+        <p><strong>Report #:</strong> #LAB-{{ consultationId }}-{{ generatedBill?.billId || 'NEW' }}</p>
+        <p><strong>Status:</strong> <span style="color: #10b981; font-weight: 700;">VERIFIED</span></p>
+      </div>
+    </div>
+
+    <div class="print-patient"
+      style="margin-top: 30px; padding: 25px; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-between; border: 1px solid #e2e8f0;">
+      <div>
+        <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Patient Profile</h3>
+        <p><strong>Patient Name:</strong> {{ patientName }}</p>
+        <p><strong>Medical ID:</strong> #P-{{ consultationId }}</p>
+        <p><strong>Consultation:</strong> #CONS-{{ consultationId }}</p>
+      </div>
+      <div style="text-align: right;">
+        <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Laboratory Details</h3>
+        <p><strong>Dept:</strong> Hematology & Bio-Chemistry</p>
+        <p><strong>Verified By:</strong> Technician #{{ labUserId }}</p>
+        <p><strong>Timestamp:</strong> {{ today | date:'short' }}</p>
+      </div>
+    </div>
+
+    <h3
+      style="margin-top: 40px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; color: #1e293b;">
+      Analytical Test Summary</h3>
+    <table class="print-table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: #f1f5f9;">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1;">Diagnostic Parameter</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Category</th>
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1;">Observed Finding</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #cbd5e1;">Unit Charge</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let test of labTests">
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; font-weight: 600;">{{ test.testName }}</td>
+          <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0; color: #64748b;">Diagnostic
+            Verification</td>
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0; color: #4f46e5; font-weight: 700;">{{
+            test.inputResult || 'Recorded ✓' }}</td>
+          <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">$ {{ (test.price || 0) |
+            number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3"
+            style="padding: 25px 12px; text-align: right; font-weight: 700; font-size: 1.1rem; color: #64748b;">Total
+            Diagnostic Charges</td>
+          <td style="padding: 25px 12px; text-align: right; font-weight: 950; font-size: 1.6rem; color: #4f46e5;">$ {{
+            (generatedBill?.totalAmount || 0) | number:'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="print-footer"
+      style="margin-top: 80px; padding-top: 30px; border-top: 1px solid #e2e8f0; text-align: center;">
+      <p style="font-size: 14px; color: #64748b; margin-bottom: 8px;">This document is an electronically verified
+        laboratory report.</p>
+      <p style="font-weight: 700; color: #1e293b;">ClinicSys Laboratory Verification Standard</p>
+      <div style="margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px;">
+        <div
+          style="border-top: 1.5px solid #1e293b; width: 180px; padding-top: 8px; font-size: 12px; font-weight: 600;">
+          Authorized Technician</div>
+        <div
+          style="border-top: 1.5px solid #1e293b; width: 180px; padding-top: 8px; font-size: 12px; font-weight: 600;">
+          Chief Pathologist</div>
+      </div>
+    </div>
+  </div>
+</div>

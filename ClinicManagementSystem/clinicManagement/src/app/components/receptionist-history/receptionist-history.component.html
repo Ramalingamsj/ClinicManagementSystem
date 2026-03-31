@@ -1,0 +1,181 @@
+<div class="workspace-container">
+  <!-- Elite Background Suite (Scoped) -->
+  <div class="floating-particle" style="top: 20%; left: 10%; animation-delay: 0s;">✦</div>
+  <div class="floating-particle" style="top: 60%; left: 80%; animation-delay: -5s;">✦</div>
+  <div class="floating-particle" style="top: 10%; left: 90%; animation-delay: -10s;">✦</div>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <!-- Header Section: Clinical Station -->
+  <header class="header-section no-print">
+    <div class="title-group">
+      <h1>Clinical History</h1>
+      <p>Audit records and registered clinical entries by <span style="color: #4f46e5; font-weight: 700;">{{ currentUser?.fullName }}</span></p>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-box glass-panel">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Search by Patient, ID or Clinician..." aria-label="Search clinical history">
+      </div>
+      <button class="btn-refresh" (click)="loadHistory()" [class.spinning]="loadingHistory">
+        <i class="fas fa-sync-alt"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="loadingHistory" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p style="color: #4f46e5; font-weight: 950; letter-spacing: 0.1em; text-transform: uppercase;">Synchronizing Records</p>
+  </div>
+
+  <!-- History Grid -->
+  <div class="history-grid" *ngIf="!loadingHistory && filteredHistory.length > 0">
+    <div class="history-card glass-panel" *ngFor="let h of filteredHistory; let i = index" [style.--i]="i">
+      <div class="card-header">
+        <div class="consult-id">REF#{{ h.appointmentId }}</div>
+        <div class="status-badge" [ngClass]="'status-' + h.statusName.toLowerCase()">
+          {{ h.statusName.toUpperCase() }}
+        </div>
+      </div>
+
+      <div class="record-line">
+        <div class="avatar-sm">{{ h.patientName[0].toUpperCase() }}</div>
+        <div class="record-info">
+          <h3 class="patient-name">{{ h.patientName }}</h3>
+          <p class="doctor-subtitle">
+            <i class="fas fa-user-md" style="margin-right: 5px; opacity: 0.7;"></i> 
+            Dr. {{ h.doctorName }}
+          </p>
+          <span class="visit-date">
+            <i class="far fa-calendar-alt"></i> {{ h.appointmentDate | date:'mediumDate' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="details-row">
+        <div class="preview-item">
+          <span class="dot"></span>
+          Token #{{ h.tokenNo }} • {{ h.slotTime }}
+        </div>
+        <div class="preview-item">
+          <span class="dot"></span>
+          Clinical Fee: ₹{{ h.consultationFee }}
+        </div>
+      </div>
+
+      <div class="card-footer" style="border-top: 1px solid rgba(226, 232, 240, 0.5); margin-top: 1.5rem; padding-bottom: 1rem;">
+        <button class="btn-action-static ripple" (click)="viewLog(h)">
+          <i class="fas fa-info-circle"></i> Clinical Entry Log
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Empty State -->
+  <div class="empty-state animate-fade-in" *ngIf="!loadingHistory && appointmentsHistory.length === 0">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-history"></i>
+    </div>
+    <h2>History Clear</h2>
+    <p>No historical clinical records have been synchronized for your session.</p>
+    <button class="btn btn-primary premium-btn" (click)="loadHistory()">Synchronize Records</button>
+  </div>
+
+  <!-- No Search Results -->
+  <div class="empty-state animate-fade-in" *ngIf="!loadingHistory && appointmentsHistory.length > 0 && filteredHistory.length === 0">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-search"></i>
+    </div>
+    <h2>No Matches Found</h2>
+    <p>We couldn't find any clinical records matching "{{ searchTerm }}".</p>
+    <button class="btn btn-primary premium-btn" (click)="searchTerm = ''">Clear Search Filter</button>
+  </div>
+
+  <!-- Elite Clinical Log Modal (Side-by-Side Redesign) -->
+  <div class="modal-overlay no-print" *ngIf="showLogModal">
+    <div class="modal-content glass-panel animate-modal-in" style="max-width: 880px; padding: 0; overflow: hidden; height: 580px;">
+      <div class="modal-layout" style="display: flex; height: 100%;">
+        
+        <!-- Left Sidebar: Audit Snapshot -->
+        <div class="modal-sidebar-info" style="width: 280px; background: rgba(79, 70, 229, 0.04); padding: 2.5rem; display: flex; flex-direction: column; border-right: 1px solid rgba(203, 213, 225, 0.4);">
+          <div class="modal-icon-badge" style="width: 64px; height: 64px; background: white; border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; color: #4f46e5; margin-bottom: 1.5rem; box-shadow: 0 15px 20px -5px rgba(79, 70, 229, 0.1);">
+            <i class="fas fa-file-medical-alt"></i>
+          </div>
+          
+          <h2 style="font-size: 1.5rem; font-weight: 900; color: #1e293b; margin-bottom: 0.75rem; line-height: 1.2;">
+            Clinical Entry particulars
+          </h2>
+          <p style="color: #64748b; font-size: 0.85rem; font-weight: 500; line-height: 1.6; margin-bottom: 2rem;">
+            Formalized clinical log for digital history tracking and audit verification.
+          </p>
+
+          <div class="log-id-badge" style="background: rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 12px; border: 1px solid rgba(79, 70, 229, 0.2); margin-bottom: 1.5rem;">
+            <p style="margin: 0; font-size: 0.65rem; color: #4f46e5; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Registry Log ID</p>
+            <p style="margin: 0; font-size: 1.1rem; color: #1e293b; font-weight: 900;">#{{ selectedLog?.appointmentId }}</p>
+          </div>
+
+          <div class="receptionist-badge" style="margin-top: auto; padding-top: 1.5rem; border-top: 1px dashed rgba(203, 213, 225, 0.6);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 32px; height: 32px; background: #1e293b; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;">
+                <i class="fas fa-user-check"></i>
+              </div>
+              <div>
+                <p style="margin: 0; font-size: 0.75rem; font-weight: 800; color: #1e293b;">Logged By</p>
+                <p style="margin: 0; font-size: 0.65rem; color: #64748b; font-weight: 600;">{{ currentUser?.fullName }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Main Pane: Entry Particulars -->
+        <div class="modal-form-main" style="flex: 1; display: flex; flex-direction: column; background: white;">
+          <div class="modal-header" style="justify-content: flex-end; padding: 1.25rem 2rem; border-bottom: none;">
+            <button class="close-btn" (click)="closeLog()">&times;</button>
+          </div>
+
+          <div class="modal-body" style="padding: 0 3.5rem 3.5rem 3.5rem; flex: 1; overflow-y: auto;">
+            <div class="entry-header" style="margin-bottom: 2rem;">
+              <div class="status-badge" [ngClass]="'status-' + selectedLog?.statusName?.toLowerCase()" style="margin-bottom: 1rem; border-radius: 8px;">
+                {{ selectedLog?.statusName?.toUpperCase() }}
+              </div>
+              <h3 style="font-size: 1.5rem; font-weight: 800; color: #1e293b; margin: 0;">{{ selectedLog?.patientName }}</h3>
+              <p style="color: #64748b; font-weight: 500; font-size: 0.9rem;">Patient Profile • Registered clinical session</p>
+            </div>
+
+            <div class="particulars-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; background: rgba(248, 250, 252, 0.6); padding: 2rem; border-radius: 20px; border: 1px solid rgba(226, 232, 240, 0.5);">
+              <div class="particular-item">
+                <p style="margin: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Medical Lead</p>
+                <p style="margin: 5px 0 0 0; font-size: 1rem; color: #1e293b; font-weight: 700;">Dr. {{ selectedLog?.doctorName }}</p>
+              </div>
+              <div class="particular-item">
+                <p style="margin: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Session Timestamp</p>
+                <p style="margin: 5px 0 0 0; font-size: 1rem; color: #1e293b; font-weight: 700;">{{ selectedLog?.appointmentDate | date:'fullDate' }}</p>
+              </div>
+              <div class="particular-item">
+                <p style="margin: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Scheduled Window</p>
+                <p style="margin: 5px 0 0 0; font-size: 1rem; color: #1e293b; font-weight: 700;">Token #{{ selectedLog?.tokenNo }} | {{ selectedLog?.slotTime }}</p>
+              </div>
+              <div class="particular-item">
+                <p style="margin: 0; font-size: 0.65rem; color: #94a3b8; font-weight: 800; text-transform: uppercase;">Financial Settlement</p>
+                <p style="margin: 5px 0 0 0; font-size: 1rem; color: #4f46e5; font-weight: 800;">₹{{ selectedLog?.consultationFee }} (Total Fee)</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding: 1.5rem 3.5rem; background: rgba(248, 250, 252, 0.4); display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary premium-btn" (click)="closeLog()" style="height: 48px; min-width: 160px; border-radius: 12px; font-weight: 800; font-size: 0.85rem;">
+              DISMISS PARTICULARS
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

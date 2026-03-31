@@ -1,0 +1,308 @@
+.login-wrapper {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #030712;
+}
+
+/* --- Crystalline Canvas (Background Shards) --- */
+.crystalline-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: radial-gradient(circle at center, #064e3b 0%, #030712 100%);
+}
+
+.glass-shard {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  animation: shardRotate 30s infinite linear;
+}
+
+.shard-1 {
+  width: 400px;
+  height: 300px;
+  top: -10%;
+  left: -5%;
+  clip-path: polygon(0 0, 100% 30%, 80% 100%, 0% 80%);
+}
+
+.shard-2 {
+  width: 500px;
+  height: 400px;
+  bottom: -5%;
+  right: -10%;
+  clip-path: polygon(20% 0%, 100% 20%, 90% 100%, 10% 90%);
+  animation-direction: reverse;
+}
+
+.shard-3 {
+  width: 300px;
+  height: 200px;
+  top: 40%;
+  right: 15%;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  animation-duration: 45s;
+}
+
+.shard-4 {
+  width: 250px;
+  height: 350px;
+  bottom: 10%;
+  left: 20%;
+  clip-path: polygon(0% 15%, 100% 0%, 85% 100%, 15% 100%);
+}
+
+@keyframes shardRotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Refraction Sweep --- */
+.refraction-sweep {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.05) 50%, transparent 60%);
+  z-index: 1;
+  pointer-events: none;
+  animation: lightSweep 8s infinite ease-in-out;
+}
+
+@keyframes lightSweep {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* --- Diamond-Cut Vault Card --- */
+.vault-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 460px;
+}
+
+.diamond-cut-card {
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(40px);
+  padding: 4rem 3.5rem;
+  clip-path: polygon(12% 0, 88% 0, 100% 12%, 100% 88%, 88% 100%, 12% 100%, 0 88%, 0 12%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.9);
+}
+
+/* --- Branding --- */
+.vault-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.prism-icon-wrapper {
+  width: 60px;
+  height: 60px;
+  background: rgba(16, 185, 129, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: #10b981;
+  margin: 0 auto 1.5rem;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+}
+
+.floating {
+  animation: float 4s infinite ease-in-out;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.vault-header h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.vault-header h1 span {
+  color: #10b981;
+}
+
+.vault-header p {
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+}
+
+/* --- Laser Interaction --- */
+.vault-input-nexus {
+  position: relative;
+  margin-top: 2rem;
+}
+
+.vault-underbar {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 0 !important;
+  color: white !important;
+  padding: 1rem 0 1rem 40px !important;
+  font-size: 1rem !important;
+  transition: all 0.4s !important;
+}
+
+.laser-focus-line {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: #10b981;
+  box-shadow: 0 0 10px #10b981;
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateX(-50%);
+}
+
+.vault-underbar:focus~.laser-focus-line {
+  width: 100%;
+}
+
+.field-icon {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #334155;
+  transition: color 0.4s;
+}
+
+.vault-underbar:focus~.field-icon {
+  color: #10b981;
+}
+
+.crystal-pulse {
+  width: 100%;
+  height: 60px;
+  background: transparent !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  color: white !important;
+  margin-top: 3rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  transition: all 0.4s;
+  clip-path: polygon(10% 0, 90% 0, 100% 25%, 100% 75%, 90% 100%, 10% 100%, 0 75%, 0 25%);
+}
+
+.crystal-pulse:hover {
+  background: rgba(16, 185, 129, 0.1) !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+}
+
+.vault-footer {
+  margin-top: 3rem;
+  text-align: center;
+}
+
+.vault-footer p {
+  font-size: 0.65rem;
+  color: #1e293b;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+/* --- Animations --- */
+.animate-vault-reveal {
+  opacity: 0;
+  transform: scale(0.95);
+  animation: vaultReveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vaultReveal {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  opacity: 0;
+  animation: fadeIn 0.8s ease forwards;
+  animation-delay: calc(var(--i, 0) * 0.2s + 0.5s);
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-glitch {
+  animation: glitch 0.4s linear;
+}
+
+@keyframes glitch {
+
+  0%,
+  100% {
+    transform: translate(0);
+  }
+
+  25% {
+    transform: translate(-2px, 2px);
+  }
+
+  50% {
+    transform: translate(2px, -2px);
+  }
+
+  75% {
+    transform: translate(-2px, -2px);
+  }
+}
+
+.animate-flicker {
+  animation: flicker 2s infinite alternate;
+}
+
+@keyframes flicker {
+  from {
+    opacity: 0.3;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

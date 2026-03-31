@@ -1,0 +1,202 @@
+<div class="history-container">
+  <!-- Dynamic Background Elements -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="header-section">
+    <div class="title-group">
+      <h1>Laboratory Records</h1>
+      <p>Manage and track all generated diagnostic invoices and fulfillment history</p>
+    </div>
+    <div class="search-box glass-panel">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" [(ngModel)]="searchTerm" placeholder="Search by Patient Name, ID or Diagnostic..."
+        (input)="onSearch()" aria-label="Search lab records">
+    </div>
+  </div>
+
+  <!-- Records Grid -->
+  <div class="tab-content animate-fade-in">
+    <div *ngIf="loading" class="loader-container">
+      <div class="pulse-loader"></div>
+      <p>Loading diagnostic history...</p>
+    </div>
+
+    <div *ngIf="error" class="error-panel animate-bounce-in">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>{{ error }}</p>
+      <button class="btn btn-outline" (click)="fetchBills()">Try Again</button>
+    </div>
+
+    <div *ngIf="!loading && !error" class="history-grid">
+      <div class="history-card glass-panel" *ngFor="let bill of filteredBills">
+        <div class="card-header">
+          <span class="bill-id">BILL #{{ bill.billId }}</span>
+          <span class="status-badge" [ngClass]="'status-' + (bill.statusName?.toLowerCase() || 'paid')">
+            {{ bill.statusName || 'FULFILLED' }}
+          </span>
+        </div>
+
+        <div class="card-body">
+          <div class="patient-line">
+            <div class="avatar-sm">
+              {{ (bill.patientName || 'P')?.charAt(0) }}
+            </div>
+            <div class="patient-info">
+              <h3 class="patient-name">{{ bill.patientName || 'Unknown Patient' }}</h3>
+              <span class="consult-ref">Total Diagnostics: {{ bill.labTests?.length || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="total-amount-row glass-panel-sm" *ngIf="bill.totalAmount > 0">
+            <span class="total-label">Total Bill Amount</span>
+            <span class="total-value">₹{{ bill.totalAmount | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Mini List of Diagnostics -->
+          <div class="medicine-history-list glass-panel-sm">
+            <div class="med-history-item" *ngFor="let t of bill.labTests">
+              <div class="med-history-info">
+                <i class="fas fa-flask med-icon-sm"></i>
+                <div class="med-main-info">
+                  <span class="med-name-sm">{{ t.testName }}</span>
+                  <span class="med-meta-sm">{{ t.result || 'Result Pending' }}</span>
+                </div>
+              </div>
+              <div class="med-qty-badge">
+                ₹{{ t.price | number:'1.0-0' }}
+              </div>
+            </div>
+          </div>
+
+          <div class="details-row mt-4">
+            <div class="detail-item">
+              <label>Consultation Ref</label>
+              <span>Ref #{{ bill.consultationId }}</span>
+            </div>
+            <div class="detail-item text-right">
+              <label>Billing Date</label>
+              <span>{{ bill.createdAt | date:'MMM d, y' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer" style="display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn-download" style="width: 100%;" (click)="printBill(bill)">
+            <i class="fas fa-file-invoice"></i>
+            <span>Download PDF Report</span>
+          </button>
+          
+          <button class="btn-sms" style="width: 100%;" 
+            [disabled]="sendingSmsMap[bill.consultationId]"
+            (click)="sendSms(bill)">
+            <i class="fas" [ngClass]="sendingSmsMap[bill.consultationId] ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+            <span>{{ sendingSmsMap[bill.consultationId] ? 'Sending...' : 'Send Bill via SMS' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="!loading && filteredBills.length === 0" class="empty-state animate-fade-in">
+      <div class="empty-icon glass-panel">
+        <i class="fas fa-file-invoice-dollar"></i>
+      </div>
+      <h2>No Records Found</h2>
+      <p>We couldn't find any lab records matching your search.</p>
+      <button class="btn btn-primary premium-btn" (click)="searchTerm = ''; onSearch()">Clear Search</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Layout (Hidden in UI) -->
+<div class="print-layout" id="print-section" *ngIf="selectedRecord">
+  <div class="print-header">
+    <div class="clinic-info">
+      <h2 style="color: #4f46e5; margin-bottom: 5px;">ClinicSys Laboratory Services</h2>
+      <p>123 Medical Plaza, Health Street, Elite District</p>
+      <p>Phone: +1 (234) 567-890 | lab@clinicsys.com</p>
+    </div>
+    <div class="invoice-meta" style="text-align: right;">
+      <h1 style="font-size: 32px; color: #1e293b; margin: 0;">LAB REPORT / BILL</h1>
+      <p><strong>Date:</strong> {{ today | date:'mediumDate' }}</p>
+      <p><strong>Bill ID:</strong> #INV-{{ selectedRecord.billId }}</p>
+      <p><strong>Status:</strong> <span style="color: #10b981; font-weight: 700;">PAID / COMPLETED</span></p>
+    </div>
+  </div>
+
+  <div class="print-patient"
+    style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-between;">
+    <div>
+      <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Patient Information</h3>
+      <p><strong>Name:</strong> {{ selectedRecord.patientName }}</p>
+      <p><strong>Patient REF:</strong> #P-{{ selectedRecord.consultationId }}</p>
+    </div>
+    <div style="text-align: right;">
+      <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Session Details</h3>
+      <p><strong>Consultation ID:</strong> #{{ selectedRecord.consultationId }}</p>
+      <p><strong>Bill Date:</strong> {{ selectedRecord.createdAt | date:'mediumDate' }}</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">
+    Diagnostic Fulfillment Summary
+  </h3>
+
+  <table class="print-table" style="width: 100%; border-collapse: collapse;" *ngIf="selectedRecord.labTests">
+    <thead>
+      <tr style="background: #f1f5f9;">
+        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1;">Test Item</th>
+        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Result Status</th>
+        <th style="padding: 12px; text-align: right; border-bottom: 2px solid #cbd5e1;">Cost (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let test of selectedRecord.labTests">
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 700;">{{ test.testName }}</div>
+          <div style="font-size: 12px; color: #64748b;">Laboratory Diagnostic</div>
+        </td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ test.result || 'Completed' }}</td>
+        <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">₹{{ test.price | number:'1.2-2' }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
+    <div
+      style="padding: 15px 30px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 20px;">
+      <span style="font-weight: 700; color: #64748b; text-transform: uppercase; font-size: 12px;">Net Total Amount</span>
+      <span style="font-size: 24px; font-weight: 900; color: #4f46e5;">₹{{ selectedRecord.totalAmount | number:'1.2-2'
+        }}</span>
+    </div>
+  </div>
+
+  <div class="print-footer"
+    style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Electronic generated report. No signature required.
+    </p>
+    <p style="font-weight: 700; color: #1e293b;">ClinicSys Laboratory Services - Care You Can Trust</p>
+  </div>
+</div>
+
+<!-- Clinical Toasts -->
+<div class="toast-container">
+  <div *ngFor="let toast of toasts" class="toast-item glass-panel animate-toast-in" 
+       [ngClass]="'toast-' + toast.type">
+    <div class="toast-icon">
+      <i class="fas" [ngClass]="{
+        'fa-check-circle': toast.type === 'success',
+        'fa-exclamation-triangle': toast.type === 'warning',
+        'fa-times-circle': toast.type === 'error'
+      }"></i>
+    </div>
+    <div class="toast-message">{{ toast.message }}</div>
+    <button class="toast-close" (click)="removeToast(toast.id)">&times;</button>
+    <div class="toast-progress"></div>
+  </div>
+</div>

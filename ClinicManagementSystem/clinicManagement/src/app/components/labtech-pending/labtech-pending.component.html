@@ -1,0 +1,93 @@
+<div class="pending-container">
+  <!-- Dynamic Background Elements -->
+
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="header-section">
+    <div class="title-group">
+      <h1>Today's Lab Tests</h1>
+      <p>Record findings for today's diagnostic queue</p>
+    </div>
+    <div class="header-actions">
+      <div class="search-box glass-panel">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchTerm" (input)="onSearch()" placeholder="Search by Patient Name or ID...">
+      </div>
+      <button class="btn-refresh glass-panel" [class.spinning]="loading" (click)="fetchToday()" title="Sync Queue">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sync-icon">
+          <path d="M21 2v6h-6"></path>
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+          <path d="M3 22v-6h6"></path>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p>Loading patient queue...</p>
+  </div>
+
+  <div *ngIf="error" class="error-panel animate-bounce-in">
+    <i class="fas fa-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+    <button class="btn btn-outline" (click)="fetchToday()">Try Again</button>
+  </div>
+
+  <div *ngIf="!loading && !error" class="patients-grid">
+    <div class="patient-card glass-panel" *ngFor="let testSuite of filteredTodayTests; let i = index" [style.--i]="i">
+      <div class="card-header">
+        <span class="consult-id">REF #{{ testSuite.consultationId }}</span>
+        <span class="status-badge" [ngClass]="getStatusClass(testSuite.labTests)">
+          {{ getStatusLabel(testSuite.labTests) }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <div class="patient-line">
+          <div class="avatar-sm">
+            {{ (testSuite.patientName || 'P')?.charAt(0) }}
+          </div>
+          <div class="patient-info">
+            <h3 class="patient-name">{{ testSuite.patientName || 'Unknown Patient' }}</h3>
+            <span class="test-count">Assigned Diagnostic Procedures</span>
+          </div>
+        </div>
+
+        <div class="details-row">
+          <div class="test-list-preview">
+            <div class="preview-item" *ngFor="let test of (testSuite.labTests || []).slice(0, 2)">
+              <span class="dot"></span> {{ test.testName }}
+            </div>
+            <div class="more-tests" *ngIf="testSuite.labTests?.length > 2">
+              + {{ testSuite.labTests.length - 2 }} extra procedures
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-action" (click)="openTestWorkspace(testSuite.consultationId)">
+          Process Results <i class="fas fa-chevron-right ml-2"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="!loading && !error && filteredTodayTests.length === 0" class="empty-state animate-fade-in">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-calendar-week"></i>
+    </div>
+    <h2>All Tests Processed</h2>
+    <p>There are no pending lab tests matching your current view.</p>
+    <button class="btn btn-primary premium-btn" (click)="searchTerm = ''; onSearch()">Refresh View</button>
+  </div>
+</div>

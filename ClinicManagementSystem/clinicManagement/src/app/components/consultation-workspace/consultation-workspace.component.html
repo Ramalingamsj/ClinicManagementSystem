@@ -1,0 +1,431 @@
+<div class="workspace-container animate-fade-in">
+  <!-- Elite Background Suite (Scoped) -->
+  <div class="floating-particle" style="top: 15%; left: 5%; animation-delay: 0s;">✦</div>
+  <div class="floating-particle" style="top: 75%; left: 85%; animation-delay: -7s;">✦</div>
+  <div class="floating-particle" style="top: 40%; left: 95%; animation-delay: -12s;">✦</div>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="workspace-grid" *ngIf="!loading">
+    <div class="sidebar-tabs">
+      <div class="tab-item" [class.active]="activeTab === 'notes'" (click)="onTabChange('notes')">
+        <div class="tab-icon">✎</div>
+        <div class="tab-content">
+          <h4>Clinical Notes</h4>
+          <span>Symptoms & Diagnosis</span>
+        </div>
+      </div>
+
+      <div class="tab-item" [class.active]="activeTab === 'medicines'" (click)="onTabChange('medicines')">
+        <div class="tab-icon">💊</div>
+        <div class="tab-content">
+          <h4>Prescriptions <small *ngIf="consultationData?.patientMedicines?.length">({{
+              consultationData?.patientMedicines?.length }})</small></h4>
+          <span>Medication plan</span>
+        </div>
+      </div>
+
+      <div class="tab-item" [class.active]="activeTab === 'labtests'" (click)="onTabChange('labtests')">
+        <div class="tab-icon">🧪</div>
+        <div class="tab-content">
+          <h4>Lab Tests <small *ngIf="consultationData?.patientLabTests?.length">({{
+              consultationData?.patientLabTests?.length }})</small></h4>
+          <span>Clinical orders</span>
+        </div>
+      </div>
+
+      <div class="tab-item" [class.active]="activeTab === 'history'" (click)="onTabChange('history')">
+        <div class="tab-icon">⏲</div>
+        <div class="tab-content">
+          <h4>History</h4>
+          <span>Patient clinical record</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="workspace-content styled-card">
+
+      <!-- NOTES TAB -->
+      <div class="tab-pane animate-fade-in" *ngIf="activeTab === 'notes'">
+        <h3>Clinical Assessment</h3>
+        <p class="section-desc">Record patient symptoms and your official diagnosis.</p>
+
+        <form #notesForm="ngForm" (ngSubmit)="saveConsultation(notesForm)">
+          <div class="form-group mb-4">
+            <label class="form-label">Main Symptoms</label>
+            <textarea class="form-control" name="symptoms" [(ngModel)]="noteData.symptoms" required #symptoms="ngModel"
+              rows="3" placeholder="Describe the current symptoms" pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$"
+              [ngClass]="{'is-invalid': symptoms.invalid && (symptoms.dirty || symptoms.touched || notesForm.submitted)}"></textarea>
+            <div *ngIf="symptoms.invalid && (symptoms.dirty || symptoms.touched || notesForm.submitted)"
+              class="invalid-feedback">
+              <span *ngIf="symptoms.errors?.['required']">Symptoms are required.</span>
+              <span *ngIf="symptoms.errors?.['pattern']">Input cannot start with a space or number, and must contain only valid characters.</span>
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label">Diagnosis</label>
+            <textarea class="form-control" name="diagnosis" [(ngModel)]="noteData.diagnosis" required
+              #diagnosis="ngModel" rows="3" placeholder="Final diagnosis" pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$"
+              [ngClass]="{'is-invalid': diagnosis.invalid && (diagnosis.dirty || diagnosis.touched || notesForm.submitted)}"></textarea>
+            <div *ngIf="diagnosis.invalid && (diagnosis.dirty || diagnosis.touched || notesForm.submitted)"
+              class="invalid-feedback">
+              <span *ngIf="diagnosis.errors?.['required']">Diagnosis is required.</span>
+              <span *ngIf="diagnosis.errors?.['pattern']">Input cannot start with a space or number, and must contain only valid characters.</span>
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label">Doctor's Internal Notes (Optional)</label>
+            <textarea class="form-control" name="doctorNotes" [(ngModel)]="noteData.notes" rows="3"
+              placeholder="Additional notes..." pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$" #dnotes="ngModel"
+              [ngClass]="{'is-invalid': dnotes.invalid && (dnotes.dirty || dnotes.touched)}"></textarea>
+            <div *ngIf="dnotes.invalid && (dnotes.dirty || dnotes.touched)" class="invalid-feedback">
+              Input cannot start with a space or number, and must contain only valid characters.
+            </div>
+          </div>
+
+          <div class="form-actions space-between mt-4">
+            <button type="submit" class="btn btn-primary btn-save" [disabled]="saving">
+              <span class="btn-icon">💾</span>
+              {{ saving ? 'Saving...' : 'Save Consultation Notes' }}
+            </button>
+            <button type="button" class="btn btn-outline" *ngIf="consultationId" (click)="onTabChange('medicines')">
+              Next: Prescriptions ➔
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- MEDICINES TAB -->
+      <div class="tab-pane animate-fade-in" *ngIf="activeTab === 'medicines'">
+        <h3>Prescriptions</h3>
+        <p class="section-desc">Add medication for the patient. Please save notes first to generate a Consultation ID.
+        </p>
+
+        <form #medicineForm="ngForm" (ngSubmit)="addMedicine(medicineForm)">
+          <!-- Medicine List Selection -->
+          <div *ngIf="consultationData?.patientMedicines?.length">
+            <label class="form-label">Added Medicines ({{ consultationData?.patientMedicines?.length }})</label>
+            <div class="scrollable-list">
+              <div class="item-pill animate-fade-in" *ngFor="let med of consultationData?.patientMedicines">
+                <div class="item-main">
+                  <span class="item-name">{{ med.medicine?.medicineName || ('Med #' + med.medicineId) }}</span>
+                  <span class="item-meta">{{med.frequency === 3 ? '1-1-1' : (med.frequency === 2 ? '1-0-1' : '1-0-0')}}
+                    ({{med.durationDays || med.duration}} Days) • {{med.notes}}</span>
+                </div>
+                <div class="item-actions">
+                  <span class="status-badge" [ngClass]="med.statusId === 7 ? 'completed' : 'pending'">
+                    {{ med.statusId === 7 ? 'Issued' : 'Pending' }}
+                  </span>
+                  <button type="button" class="danger-icon ml-2" *ngIf="med.statusId !== 7"
+                    (click)="deleteMedicine(med.patientMedicineId)" title="Remove Medicine">×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State for Medicines -->
+          <div class="empty-state animate-fade-in" *ngIf="!consultationData?.patientMedicines?.length">
+            <div class="empty-state-icon">💊</div>
+            <p>No medicines added to this prescription yet.</p>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group w-50" style="padding-right: 1rem;">
+              <label class="form-label">Medicine</label>
+              <div class="custom-dropdown" [class.open]="showMedDropdown">
+                <div class="dropdown-toggle" (click)="showMedDropdown = !showMedDropdown"
+                  [class.is-invalid]="!medicineData.medicineId && medicineForm.submitted">
+                  <span>{{ getSelectedMedicineName() }}</span>
+                  <span class="arrow">▼</span>
+                </div>
+
+                <input type="hidden" name="medicineId" [(ngModel)]="medicineData.medicineId" #medicineId="ngModel">
+
+                <div class="dropdown-menu" [hidden]="!showMedDropdown" (click)="$event.stopPropagation()">
+                  <div class="dropdown-search">
+                    <input type="text" name="medSearch" [(ngModel)]="medSearchTerm" placeholder="Search medicine..."
+                      (click)="$event.stopPropagation()">
+                  </div>
+                  <div class="dropdown-options">
+                    <div class="dropdown-option" *ngFor="let med of filteredMedicines"
+                      (mousedown)="selectMedicine(med)">
+                      {{ med.medicineName || med.name }}
+                    </div>
+                    <div class="dropdown-no-results" *ngIf="filteredMedicines.length === 0">
+                      No medicines found
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div *ngIf="medicineData.medicineId == null && medicineForm.submitted" class="invalid-feedback"
+                style="display: block;">
+                Please select a medicine.
+              </div>
+            </div>
+            <div class="form-group w-50">
+              <label class="form-label">Frequency (e.g., 1-0-1)</label>
+              <select class="form-control" name="dosage" [(ngModel)]="medicineData.dosage" required #dosage="ngModel"
+                [ngClass]="{'is-invalid': dosage.invalid && (dosage.dirty || dosage.touched || medicineForm.submitted)}">
+                <option value="" disabled selected>Select Dosage...</option>
+                <option [ngValue]="3">1-1-1</option>
+                <option [ngValue]="2">1-0-1</option>
+                <option [ngValue]="1">1-0-0</option>
+              </select>
+              <div *ngIf="dosage.invalid && (dosage.dirty || dosage.touched || medicineForm.submitted)"
+                class="invalid-feedback">
+                <span *ngIf="dosage.errors?.['required']">Dosage is required</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group w-50" style="padding-right: 1rem;">
+              <label class="form-label">Duration (Days)</label>
+              <input type="number" class="form-control" name="duration" [(ngModel)]="medicineData.duration" required
+                max="30" min="1" #duration="ngModel" placeholder="e.g. 5"
+                [ngClass]="{'is-invalid': duration.invalid && (duration.dirty || duration.touched || medicineForm.submitted)}">
+              <div *ngIf="duration.invalid && (duration.dirty || duration.touched || medicineForm.submitted)"
+                class="invalid-feedback">
+                <span *ngIf="duration.errors?.['required']">Duration is required</span>
+                <span *ngIf="duration.errors?.['max']">Duration should be less than or equal to 30 days</span>
+                <span *ngIf="duration.errors?.['min']">Minimum duration is 1 day</span>
+              </div>
+            </div>
+            <div class="form-group w-50">
+              <label class="form-label">Notes / Timing</label>
+              <select class="form-control" name="notes" [(ngModel)]="medicineData.notes" required #mednotes="ngModel"
+                [ngClass]="{'is-invalid': mednotes.invalid && (mednotes.dirty || mednotes.touched || medicineForm.submitted)}">
+                <option value="" disabled selected>Select timing...</option>
+                <option value="After food">After food</option>
+                <option value="Before food">Before food</option>
+              </select>
+              <div *ngIf="mednotes.invalid && (mednotes.dirty || mednotes.touched || medicineForm.submitted)"
+                class="invalid-feedback">
+                <span *ngIf="mednotes.errors?.['required']">Please select a timing.</span>
+              </div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="saving">+ Add Medicine</button>
+        </form>
+      </div>
+
+      <!-- LAB TESTS TAB -->
+      <div class="tab-pane animate-fade-in" *ngIf="activeTab === 'labtests'">
+        <h3>Order Lab Tests</h3>
+        <p class="section-desc">Assign lab procedures to the patient.</p>
+
+        <form #labTestForm="ngForm" (ngSubmit)="addLabTest(labTestForm)">
+          <!-- Added Lab Tests List -->
+          <div *ngIf="consultationData?.patientLabTests?.length">
+            <label class="form-label">Ordered Tests ({{ consultationData?.patientLabTests?.length }})</label>
+            <div class="scrollable-list">
+              <div class="item-pill animate-fade-in" *ngFor="let test of consultationData?.patientLabTests">
+                <div class="item-main">
+                  <span class="item-name">{{test.labtest?.testName || ('Test #' + test.labTestId)}}</span>
+                  <span class="item-meta" *ngIf="test.testNotes">Note: {{test.testNotes}}</span>
+                </div>
+                <div class="item-actions">
+                  <!-- Only show Pending if no result AND not completed -->
+                  <span class="status-badge pending" *ngIf="!test.result && test.statusId !== 7">
+                    Pending
+                  </span>
+
+                  <!-- Show Result if exists -->
+                  <!-- Show Result if exists -->
+                  <div class="big-result-container" *ngIf="test.result">
+                    <div *ngIf="test.result.includes('|'); else simpleResult" class="structured-result-grid">
+                      <div *ngFor="let res of parseResult(test.result)" class="result-card animate-fade-in">
+                        <span class="res-label">{{res.key}}</span>
+                        <span class="res-data">{{res.value}}</span>
+                      </div>
+                    </div>
+                    <ng-template #simpleResult>
+                      <div class="simple-result-box">
+                        <i class="fas fa-file-medical-alt"></i>
+                        <span>{{test.result}}</span>
+                      </div>
+                    </ng-template>
+                  </div>
+
+                  <!-- Show Completed if status is 7 but no result text (fallback) -->
+                  <span class="status-badge completed" *ngIf="!test.result && test.statusId === 7">
+                    Completed
+                  </span>
+
+                  <button type="button" class="danger-icon ml-2" *ngIf="!test.result && test.statusId !== 7"
+                    (click)="deleteLabTest(test.patientLabtestId)" title="Remove Test">×</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Empty State for Lab Tests -->
+          <div class="empty-state animate-fade-in" *ngIf="!consultationData?.patientLabTests?.length">
+            <div class="empty-state-icon">🧪</div>
+            <p>No lab tests have been ordered for this patient visit yet.</p>
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label">Select Test</label>
+            <div class="custom-dropdown" [class.open]="showLabDropdown">
+              <div class="dropdown-toggle" (click)="showLabDropdown = !showLabDropdown"
+                [class.is-invalid]="labTestData.labTestId == null && labTestForm.submitted">
+                <span>{{ getSelectedLabTestName() }}</span>
+                <span class="arrow">▼</span>
+              </div>
+
+              <input type="hidden" name="labTestId" [(ngModel)]="labTestData.labTestId" #ltId="ngModel">
+
+              <div class="dropdown-menu" [hidden]="!showLabDropdown" (click)="$event.stopPropagation()">
+                <div class="dropdown-search">
+                  <input type="text" name="labSearch" [(ngModel)]="labSearchTerm" placeholder="Search lab test..."
+                    (click)="$event.stopPropagation()">
+                </div>
+                <div class="dropdown-options">
+                  <div class="dropdown-option" *ngFor="let test of filteredLabTests" (mousedown)="selectLabTest(test)">
+                    {{ test.testName || test.name }}
+                  </div>
+                  <div class="dropdown-no-results" *ngIf="filteredLabTests.length === 0">
+                    No lab tests found
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div *ngIf="labTestData.labTestId == null && labTestForm.submitted" class="invalid-feedback"
+              style="display: block;">
+              Please select a lab test.
+            </div>
+          </div>
+
+          <div class="form-group mb-4">
+            <label class="form-label">Special Instructions for Lab Technician (Optional)</label>
+            <textarea class="form-control" name="testNotes" [(ngModel)]="labTestData.testNotes" rows="2"
+              placeholder="e.g. Fasting required" pattern="^(?!\s)(?![0-9])[a-zA-Z0-9\s.,?!()\-]*$" #testNotes="ngModel"
+              [ngClass]="{'is-invalid': testNotes.invalid && (testNotes.dirty || testNotes.touched)}"></textarea>
+            <div *ngIf="testNotes.invalid && (testNotes.dirty || testNotes.touched)" class="invalid-feedback">
+              Input cannot start with a space or number, and must contain only valid characters.
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" [disabled]="saving">+ Order Test</button>
+        </form>
+      </div>
+
+      <!-- HISTORY TAB -->
+      <div class="tab-pane animate-fade-in" *ngIf="activeTab === 'history'">
+        <div class="history-header">
+          <h3>Consultation History</h3>
+          <p class="section-desc">Past consultations for {{ patientName }} with you.</p>
+        </div>
+
+        <div class="history-loading" *ngIf="loadingHistory">
+          <div class="spinner"></div>
+          <p>Loading clinical history...</p>
+        </div>
+
+        <div class="history-empty" *ngIf="!loadingHistory && patientHistory.length === 0">
+          <div class="empty-icon">📅</div>
+          <h4>No Previous Records</h4>
+          <p>This patient has no prior consultations recorded with you in this system.</p>
+        </div>
+
+        <div class="history-content-area" *ngIf="!loadingHistory && patientHistory.length > 0">
+          <div class="history-list">
+            <div class="history-card" *ngFor="let record of patientHistory">
+              <div class="history-card-header">
+                <div class="header-main">
+                  <span class="visit-date">{{ (record.createdAt || record.consultationDate) | date:'mediumDate' }}</span>
+                  <h4 class="diagnosis-title">{{ record.diagnosis }}</h4>
+                </div>
+                <div class="visit-stats">
+                  <span *ngIf="record.patientMedicines?.length">{{record.patientMedicines?.length}} Medications</span>
+                  <span *ngIf="record.patientLabTests?.length">{{record.patientLabTests?.length}} Lab Tests</span>
+                </div>
+              </div>
+
+              <div class="history-card-body">
+                <div class="history-detail-row">
+                  <label>Symptoms Recorded</label>
+                  <p>{{ record.symptoms }}</p>
+                </div>
+
+                <div class="history-detail-row" *ngIf="record.patientMedicines?.length">
+                  <label>Prescribed Medicines</label>
+                  <div class="history-medicines-list">
+                    <span class="med-row" *ngFor="let med of record.patientMedicines">
+                      {{ med.medicine?.medicineName }} - {{ med.dosage }} ({{ med.duration }} Days)
+                    </span>
+                  </div>
+                </div>
+
+                <div class="history-detail-row" *ngIf="record.patientLabTests?.length">
+                  <label>Lab Findings</label>
+                  <div class="history-labs-list">
+                    <div class="lab-row" *ngFor="let test of record.patientLabTests">
+                      <strong>{{ test.labtest?.testName }}:</strong> 
+                      
+                  <!-- Show Result if exists -->
+                  <div class="big-result-container" *ngIf="test.result">
+                    <div *ngIf="test.result.includes('|'); else simpleResult" class="structured-result-grid">
+                      <div *ngFor="let res of parseResult(test.result)" class="result-card animate-fade-in">
+                        <span class="res-label">{{res.key}}</span>
+                        <span class="res-data">{{res.value}}</span>
+                      </div>
+                    </div>
+                    <ng-template #simpleResult>
+                      <div class="simple-result-box">
+                        <i class="fas fa-file-medical-alt"></i>
+                        <span>{{test.result}}</span>
+                      </div>
+                    </ng-template>
+                  </div>
+                      
+                      <span class="text-muted" *ngIf="!test.result">Result Pending</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="history-detail-row" *ngIf="record.doctorNotes">
+                  <label>Additional Remarks</label>
+                  <p class="italic">"{{ record.doctorNotes }}"</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Custom Elite Modal Overlay -->
+<div class="custom-modal-overlay animate-fade-in" *ngIf="showModal" (click)="closeModal()">
+  <div class="custom-modal glass-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header-icon" [ngClass]="modalType">
+      <i class="fas" [ngClass]="modalIcon"></i>
+    </div>
+    
+    <div class="modal-content">
+      <h3 class="modal-title">{{ modalTitle }}</h3>
+      <p class="modal-message">{{ modalMessage }}</p>
+    </div>
+
+    <div class="modal-actions">
+      <button *ngIf="isConfirmMode" class="btn btn-secondary-glass" (click)="closeModal()">
+        Cancel
+      </button>
+      <button class="btn btn-modal-primary" [ngClass]="modalType" (click)="isConfirmMode ? onModalConfirm() : closeModal()">
+        {{ isConfirmMode ? 'Confirm' : 'Got it' }}
+      </button>
+    </div>
+  </div>
+</div>

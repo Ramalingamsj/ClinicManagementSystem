@@ -1,6 +1,8 @@
 using ClinicManagementSystem.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ClinicManagementSystem.Repository
 {
@@ -14,8 +16,27 @@ namespace ClinicManagementSystem.Repository
 
         public async Task<Consultation> AddConsultationRepository(Consultation consultation)
         {
-            if (_context != null)
+            if (_context == null) return null;
+
+            // Check if consultation already exists for this appointment
+            var existingConsultation = await _context.Consultations
+                .FirstOrDefaultAsync(c => c.AppointmentId == consultation.AppointmentId);
+
+            if (existingConsultation != null)
             {
+                // Update existing record
+                existingConsultation.Symptoms = consultation.Symptoms;
+                existingConsultation.Diagnosis = consultation.Diagnosis;
+                existingConsultation.DoctorNotes = consultation.DoctorNotes;
+                // Keep the original CreatedAt or update it if preferred. We'll keep it.
+                
+                _context.Consultations.Update(existingConsultation);
+                await _context.SaveChangesAsync();
+                return existingConsultation;
+            }
+            else
+            {
+                // Add new record
                 await _context.Consultations.AddAsync(consultation);
 
                 // Auto-update the related Appointment Status to 2 ('Completed')
@@ -26,11 +47,8 @@ namespace ClinicManagementSystem.Repository
                 }
 
                 await _context.SaveChangesAsync();
-
-                return consultation; 
+                return consultation;
             }
-
-            return null;
         }
 
         public async Task<IEnumerable<Appointment>> GetPendingPatientsRepository(int id)
@@ -71,6 +89,13 @@ namespace ClinicManagementSystem.Repository
                 .Where(c => c.Appointment.PatientId == patientId && c.Appointment.DoctorId == doctorId)
                 .OrderByDescending(c => c.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<Appointment> GetAppointmentByIdRepository(int appointmentId)
+        {
+            return await _context.Appointments
+                .Include(a => a.Patient)
+                .FirstOrDefaultAsync(a => a.AppointmentId == appointmentId);
         }
 
         public async Task<PatientMedicine> AddPrescriptionRepository(int consultationId, PatientMedicine medicine)
@@ -114,9 +139,37 @@ namespace ClinicManagementSystem.Repository
             return await _context.Consultations
                 .Include(c => c.PatientMedicines)
                     .ThenInclude(pm => pm.Medicine)
+                .Include(c => c.PatientMedicines)
+                    .ThenInclude(pm => pm.Status)
                 .Include(c => c.PatientLabTests)
                     .ThenInclude(plt => plt.Labtest)
+                .Include(c => c.PatientLabTests)
+                    .ThenInclude(plt => plt.Status)
                 .FirstOrDefaultAsync(c => c.ConsultationId == consultationId);
+        }
+
+        public async Task<Consultation> GetConsultationByAppointmentRepository(int appointmentId)
+        {
+            return await _context.Consultations
+                .Include(c => c.PatientMedicines)
+                    .ThenInclude(pm => pm.Medicine)
+                .Include(c => c.PatientMedicines)
+                    .ThenInclude(pm => pm.Status)
+                .Include(c => c.PatientLabTests)
+                    .ThenInclude(plt => plt.Labtest)
+                .Include(c => c.PatientLabTests)
+                    .ThenInclude(plt => plt.Status)
+                .FirstOrDefaultAsync(c => c.AppointmentId == appointmentId);
+        }
+
+        public async Task<IEnumerable<Medicine>> GetAllMedicinesRepository()
+        {
+            return await _context.Medicines.ToListAsync();
+        }
+
+        public async Task<IEnumerable<LabTest>> GetAllLabTestsRepository()
+        {
+            return await _context.LabTests.ToListAsync();
         }
 
         public async Task<PatientMedicine> EditPrescriptionRepository(int patientMedicineId, PatientMedicine medicine)
@@ -127,6 +180,7 @@ namespace ClinicManagementSystem.Repository
                 existingMedicine.MedicineId = medicine.MedicineId;
                 existingMedicine.DurationDays = medicine.DurationDays;
                 existingMedicine.Frequency = medicine.Frequency;
+                existingMedicine.StatusId = 6; // Force back to Prescribed on edit
                 
                 await _context.SaveChangesAsync();
                 await _context.Entry(existingMedicine).Reference(m => m.Status).LoadAsync();
@@ -152,6 +206,7 @@ namespace ClinicManagementSystem.Repository
             if (existingLabTest != null)
             {
                 existingLabTest.LabtestId = labTest.LabtestId;
+                existingLabTest.StatusId = 6; // Force back to Prescribed on edit
                 
                 await _context.SaveChangesAsync();
                 await _context.Entry(existingLabTest).Reference(lt => lt.Status).LoadAsync();
@@ -170,5 +225,28 @@ namespace ClinicManagementSystem.Repository
             }
             return false;
         }
+
+        public async Task<IEnumerable<dynamic>> GetDoctorHistoryRepository(int doctorId)
+        {
+            return await _context.Consultations
+                .Include(c => c.Appointment)
+                    .ThenInclude(a => a.Patient)
+                .Include(c => c.PatientMedicines)
+                .Include(c => c.PatientLabTests)
+                .Where(c => c.Appointment.DoctorId == doctorId)
+                .OrderByDescending(c => c.CreatedAt)
+                .Select(c => new
+                {
+                    ConsultationId = c.ConsultationId,
+                    AppointmentId = c.AppointmentId,
+                    PatientName = c.Appointment.Patient.PatientName,
+                    Diagnosis = c.Diagnosis,
+                    ConsultationDate = c.CreatedAt,
+                    PatientMedicines = c.PatientMedicines.Select(pm => new { pm.PatientMedicineId }), // Minimal data for counts
+                    PatientLabTests = c.PatientLabTests.Select(plt => new { plt.PatientLabtestId })    // Minimal data for counts
+                })
+                .ToListAsync<dynamic>();
+        }
     }
 }
+

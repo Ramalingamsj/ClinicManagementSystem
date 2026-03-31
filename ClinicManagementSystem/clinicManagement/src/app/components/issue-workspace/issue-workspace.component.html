@@ -1,0 +1,261 @@
+<div class="workspace-container">
+  <!-- Elite Background Suite (Scoped) -->
+  <div class="floating-particle" style="top: 15%; left: 5%; animation-delay: 0s;">✦</div>
+  <div class="floating-particle" style="top: 75%; left: 85%; animation-delay: -7s;">✦</div>
+  <div class="floating-particle" style="top: 40%; left: 95%; animation-delay: -12s;">✦</div>
+
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <!-- Header -->
+  <div class="header-content animate-fade-in">
+    <div class="patient-title">
+      <h1>{{ patientName || 'Synchronizing Patient...' }}</h1>
+      <span class="status-badge" [ngClass]="{'badge-success': allIssued, 'badge-warning': !allIssued}">
+        {{ allIssued ? 'Prescription Fulfilled' : 'Pending Issuance' }}
+      </span>
+      <span class="patient-phone">
+        <i class="fas fa-hashtag"></i> REF#{{ consultationId }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p style="color: var(--color-primary); font-weight: 700; letter-spacing: 0.05em;">SYNCHRONIZING RECORDS</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="alert alert-danger glass-panel animate-fade-in"
+    style="color: #ef4444; background: rgba(254, 242, 242, 0.8); border: 1px solid #fca5a5; padding: 1.5rem; border-radius: 20px; margin-bottom: 2rem;">
+    <i class="fas fa-exclamation-circle" style="margin-right: 10px;"></i>
+    {{ error }}
+  </div>
+
+  <!-- Success State & Bill Details -->
+  <div *ngIf="allIssued && !loading" class="success-group animate-slide-up">
+    <!-- Success Banner -->
+    <div class="success-banner glass-panel-premium" [ngClass]="{'billed': generatedBill}">
+      <div class="banner-main">
+        <div class="success-icon">
+          <i class="fas" [ngClass]="generatedBill ? 'fa-file-invoice-dollar' : 'fa-check-double'"></i>
+        </div>
+        <div class="success-text">
+          <h3>{{ generatedBill ? 'Pharmacy Transaction Finalized' : 'Fulfillment Complete' }}</h3>
+          <p>{{ generatedBill ? 'The official pharmaceutical report and invoice have been generated.' : 'All prescribed
+            items have been issued. You can now finalize the billing.' }}</p>
+        </div>
+      </div>
+
+      <div class="banner-actions">
+        <button *ngIf="!generatedBill" class="premium-btn" [disabled]="generatingBill" (click)="generateBill()">
+          <i class="fas fa-file-invoice-dollar" style="margin-right: 8px;"></i>
+          {{ generatingBill ? 'Generating...' : 'Finalize & Generate Bill' }}
+        </button>
+
+        <div *ngIf="generatedBill" class="bill-stats">
+          <div class="amount-tag">
+            <span class="label">Total Amount</span>
+            <span class="value">${{ generatedBill.totalAmount | number:'1.2-2' }}</span>
+          </div>
+          <button class="pdf-btn" (click)="printBill()">
+            <i class="fas fa-print" style="margin-right: 8px;"></i>
+            Print Invoice
+          </button>
+          <button class="sms-summary-btn" (click)="sendSMS()" [disabled]="sendingSms">
+            <i class="fas" [ngClass]="sendingSms ? 'fa-circle-notch fa-spin' : 'fa-sms'" style="margin-right: 8px;"></i>
+            {{ sendingSms ? 'Transmitting...' : 'Send SMS' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bill Details Card -->
+    <div *ngIf="generatedBill" class="bill-details-card glass-panel-premium animate-fade-in no-print">
+      <div class="card-header">
+        <div class="title-group-sm">
+          <i class="fas fa-receipt"></i>
+          <h4>Detailed Pharmaceutical Summary</h4>
+        </div>
+        <span class="invoice-no">#PH-INV-{{ consultationId }}-{{ generatedBill.billId || 'NEW' }}</span>
+      </div>
+
+      <div class="bill-table-wrapper">
+        <table class="bill-table">
+          <thead>
+            <tr>
+              <th>Medicine Name</th>
+              <th>Quantity</th>
+              <th class="text-right">Price</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let med of medicines">
+              <td>
+                <div class="med-name-cell">
+                  <strong>{{ med.medicineName }}</strong>
+                  <span>{{ med.medicineType }}</span>
+                </div>
+              </td>
+              <td>{{ med.quantity }} Units</td>
+              <td class="text-right">$ {{ (med.price || 0) | number:'1.2-2' }}</td>
+              <td class="text-right">$ {{ ((med.price || 0) * med.quantity) | number:'1.2-2' }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="3" class="text-right">Grand Total</td>
+              <td class="text-right amount-total">$ {{ (generatedBill.totalAmount || 0) | number:'1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Medicine Queue Table (Visible during issuance) -->
+  <div class="workspace-body glass-panel" *ngIf="!loading && !error && medicines.length > 0 && !generatedBill">
+    <div class="section-title">
+      <h3>Prescription Fulfillment</h3>
+      <p class="section-desc">Issue the following medications. Stock is automatically managed.</p>
+    </div>
+
+    <div class="medicine-list">
+      <div class="medicine-item styled-card" *ngFor="let med of medicines; let i = index"
+        [ngClass]="{'issued-item': med.statusId === 7}" [style.--i]="i">
+
+        <div class="med-info">
+          <div class="med-icon">
+            <i class="fas fa-pills"></i>
+          </div>
+          <div class="med-details">
+            <h4>{{ med.medicineName }}</h4>
+            <span class="med-type meta-pill">{{ med.medicineType || 'Drug' }}</span>
+          </div>
+        </div>
+
+        <div class="med-stats">
+          <div class="stat-block">
+            <span class="stat-label">System Stock</span>
+            <span class="stat-value" [ngStyle]="{'color': med.stock < 10 ? '#ef4444' : 'inherit'}">{{ med.stock
+              }}</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Dosage</span>
+            <span class="stat-value">{{ med.frequency }}x Daily</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">Issue Qty</span>
+            <span class="stat-value highlight-qty">{{ (med.frequency * med.durationDays) || 0 }}</span>
+          </div>
+        </div>
+
+        <div class="med-action">
+          <button class="btn-issue" *ngIf="med.statusId !== 7" [disabled]="med._issuing"
+            (click)="issueMedicine(med.patientMedicineId)">
+            <span>{{ med._issuing ? 'Processing...' : 'Issue Med' }}</span>
+          </button>
+
+          <div class="issued-badge-premium" *ngIf="med.statusId === 7">
+            <i class="fas fa-check-circle"></i>
+            <span>ISSUED</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State if no medicines -->
+  <div class="empty-state" *ngIf="!loading && !error && medicines.length === 0">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-clipboard-list"></i>
+    </div>
+    <h2>No Prescriptions</h2>
+    <p>This consultation record does not contain any medicines to be issued.</p>
+    <button class="btn btn-primary premium-btn" (click)="goBack()">Back to Queue</button>
+  </div>
+
+
+  <!-- Print Layout (Hidden in UI) -->
+  <div class="print-layout" id="print-section">
+    <!-- Rest of print layout remains same as it's for physical printing -->
+    <div class="print-header">
+      <div class="clinic-info">
+        <h2 style="color: #4f46e5; margin-bottom: 5px;">ClinicSys Medical Center</h2>
+        <p>123 Medical Plaza, Health Street, Elite District</p>
+        <p>Phone: +1 (234) 567-890 | Email: care@clinicsys.com</p>
+        <p style="margin-top: 10px;"><strong>GSTIN:</strong> 22AAAAA0000A1Z5</p>
+      </div>
+      <div class="invoice-meta" style="text-align: right;">
+        <h1 style="font-size: 32px; color: #1e293b; margin: 0;">INVOICE</h1>
+        <p><strong>Date:</strong> {{ today | date:'mediumDate' }}</p>
+        <p><strong>Invoice #:</strong> #INV-{{ consultationId }}-{{ generatedBill?.billId || 'NEW' }}</p>
+        <p><strong>Status:</strong> <span style="color: #10b981; font-weight: 700;">PAID</span></p>
+      </div>
+    </div>
+
+    <div class="print-patient"
+      style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-between;">
+      <div>
+        <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Patient Information</h3>
+        <p><strong>Name:</strong> {{ patientName }}</p>
+        <p><strong>Patient ID:</strong> #P-{{ consultationId }}</p>
+      </div>
+      <div style="text-align: right;">
+        <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Consultation Details</h3>
+        <p><strong>Consultation ID:</strong> #CONS-{{ consultationId }}</p>
+      </div>
+    </div>
+
+    <h3 style="margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">Medicine
+      Fulfillment Details</h3>
+    <table class="print-table" style="width: 100%; border-collapse: collapse;">
+      <thead>
+        <tr style="background: #f1f5f9;">
+          <th style="padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1;">Medicine Item</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Category</th>
+          <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Quantity</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #cbd5e1;">Unit Price</th>
+          <th style="padding: 12px; text-align: right; border-bottom: 2px solid #cbd5e1;">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let med of medicines">
+          <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">{{ med.medicineName }}</td>
+          <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ med.medicineType }}</td>
+          <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ med.quantity }} Units</td>
+          <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">$ {{ (med.price || 0) |
+            number:'1.2-2' }}</td>
+          <td style="padding: 12px; text-align: right; border-bottom: 1px solid #e2e8f0;">$ {{ ((med.price || 0) *
+            med.quantity) | number:'1.2-2' }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" style="padding: 20px 12px; text-align: right; font-weight: 700; font-size: 1.1rem;">Grand
+            Total Calculation</td>
+          <td style="padding: 20px 12px; text-align: right; font-weight: 900; font-size: 1.4rem; color: #4f46e5;">$ {{
+            (generatedBill?.totalAmount || 0) | number:'1.2-2' }}</td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="print-footer"
+      style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
+      <p style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Thank you for visiting ClinicSys Medical Center.
+      </p>
+      <p style="font-weight: 700; color: #1e293b;">Wish you a speedy recovery!</p>
+      <div style="margin-top: 40px; display: flex; justify-content: space-between;">
+        <div style="border-top: 1px solid #333; width: 150px; padding-top: 5px; font-size: 12px;">Pharmacist Signature
+        </div>
+        <div style="border-top: 1px solid #333; width: 150px; padding-top: 5px; font-size: 12px;">Authorized Stamp</div>
+      </div>
+    </div>
+  </div>
+</div>

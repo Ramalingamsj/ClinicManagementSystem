@@ -1,0 +1,82 @@
+<div class="home-wrapper">
+  
+  <!-- Sanctuary Canvas (Light Background) -->
+  <div class="sanctuary-canvas">
+    <div class="cloud-drift drift-1"></div>
+    <div class="cloud-drift drift-2"></div>
+    <div class="clinical-mesh"></div>
+  </div>
+
+  <!-- Azure HUD -->
+  <nav class="azure-hud animate-fade-down">
+    <div class="hud-inner">
+      <div class="hud-brand">
+        <i class="fas fa-hand-holding-medical azure-icon"></i>
+        <span>CLINICAL <strong>SANCTUARY</strong></span>
+      </div>
+      <div class="hud-links">
+        <button routerLink="/login" class="hud-login-btn">STAFF PORTAL</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Clarity Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <div class="hero-text animate-reveal-up" style="--i: 1;">
+        <span class="clarity-badge">ULTRA-MODERN CLINICAL SUITE</span>
+        <h1>Clinical <span>Clarity</span> for Modern Wellness</h1>
+        <p>Experience a high-purity management workstation designed for precision, trust, and absolute synchronization.</p>
+        <div class="hero-actions">
+          <button routerLink="/login" class="primary-azure-btn">INITIALIZE SESSION <i class="fas fa-chevron-right"></i></button>
+          <button class="secondary-white-btn">OUR PROTOCOLS</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pulse Metrics (Stats) -->
+  <section class="metrics-section animate-reveal-up" style="--i: 2;">
+    <div class="metrics-grid">
+      <div *ngFor="let stat of stats" class="metric-item">
+        <div class="metric-value">{{ stat.value }}</div>
+        <div class="metric-label">{{ stat.label }}</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Crystal Console Hub -->
+  <section class="console-hub">
+    <div class="hub-header animate-reveal-up" style="--i: 3;">
+      <h2>Role-Based <span>Workstations</span></h2>
+      <p>Synchronized command centers for every medical department.</p>
+    </div>
+
+    <div class="crystal-grid">
+      <div *ngFor="let feature of features; let i = index" 
+           class="crystal-card animate-reveal-up" 
+           [style.--i]="i + 4"
+           routerLink="/login">
+        <div class="card-icon-blob" [ngClass]="feature.color">
+          <i class="fas" [ngClass]="feature.icon"></i>
+        </div>
+        <h3>{{ feature.title }}</h3>
+        <p>{{ feature.desc }}</p>
+        <div class="card-action">ENTER CONSOLE <i class="fas fa-arrow-right"></i></div>
+        <div class="crystal-refraction"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sanctuary Footer -->
+  <footer class="sanctuary-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <i class="fas fa-shield-virus"></i>
+        <span>CLINICAL REGISTRY v20.0</span>
+      </div>
+      <p>© 2026 PRECISION HEALTH SYSTEMS • SECURED BY NEURAL CORE</p>
+    </div>
+  </footer>
+
+</div>

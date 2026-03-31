@@ -1,0 +1,92 @@
+<div class="history-container">
+  <!-- Elite Background Suite (Scoped) -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+
+  <!-- Header Section: Clinical Station -->
+  <header class="header-section">
+    <div class="title-group">
+      <h1>Clinical History</h1>
+      <p>Consultation logs and diagnostic records</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-box">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" placeholder="Search by diagnosis or Ref ID..." [(ngModel)]="searchTerm">
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p style="color: var(--color-primary); font-weight: 700; letter-spacing: 0.05em;">SYNCHRONIZING RECORDS</p>
+  </div>
+
+  <!-- History Grid -->
+  <div class="history-grid" *ngIf="!loading && filteredHistory.length > 0">
+    <div class="history-card glass-panel" *ngFor="let record of filteredHistory; let i = index" [style.--i]="i">
+      <div class="card-header">
+        <div class="consult-id">REF#{{ record.consultationId }}</div>
+        <div class="status-badge status-completed">COMPLETED</div>
+      </div>
+
+      <div class="record-line">
+        <div class="avatar-sm">{{ (record.patientName || 'P')[0] }}</div>
+        <div class="record-info">
+          <h3 class="patient-name">{{ record.patientName || 'Anonymous Patient' }}</h3>
+          <p class="diagnosis-subtitle">{{ record.diagnosis }}</p>
+          <span class="visit-date">
+            <i class="far fa-calendar-alt"></i> {{ record.consultationDate | date:'mediumDate' }}
+          </span>
+        </div>
+      </div>
+
+
+      <div class="details-row">
+        <div class="preview-item">
+          <span class="dot"></span>
+          {{ record.patientMedicines?.length || 0 }} Medications
+        </div>
+        <div class="preview-item">
+          <span class="dot"></span>
+          {{ record.patientLabTests?.length || 0 }} Lab Tests
+        </div>
+      </div>
+
+      <div class="card-footer">
+        <button class="btn-action" (click)="viewDetails(record.appointmentId)">
+          <span>Review Case Record</span>
+          <i class="fas fa-file-medical"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- No Results State -->
+  <div class="empty-state animate-fade-in" *ngIf="!loading && history.length > 0 && filteredHistory.length === 0">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-search"></i>
+    </div>
+    <h2>No Matches Found</h2>
+    <p>We couldn't find any clinical records matching "<strong>{{ searchTerm }}</strong>".</p>
+    <button class="btn btn-primary premium-btn" (click)="searchTerm = ''">Clear Filters</button>
+  </div>
+
+  <!-- Total Empty State -->
+  <div class="empty-state animate-fade-in" *ngIf="!loading && history.length === 0">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-notes-medical"></i>
+    </div>
+    <h2>History Clear</h2>
+    <p>No historical clinical records have been synchronized for this practitioner profile.</p>
+    <button class="btn btn-primary premium-btn" (click)="fetchHistory()">Synchronize Records</button>
+  </div>
+</div>

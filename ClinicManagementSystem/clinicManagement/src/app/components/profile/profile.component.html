@@ -1,0 +1,72 @@
+<div class="profile-container animate-fade-in">
+  <div class="dashboard-header mb-4">
+    <div>
+      <h1>Doctor Profile</h1>
+      <p>Manage your professional identity and consultation details.</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading profile data...</p>
+  </div>
+
+  <div *ngIf="!loading && doctorData" class="profile-card glass-panel">
+    <div class="profile-banner"></div>
+    
+    <div class="profile-avatar-wrapper">
+      <div class="avatar-circle">
+        {{ doctorData.fullName?.charAt(0) || 'D' }}
+      </div>
+    </div>
+    
+    <div class="profile-content">
+      <div class="text-center mb-4">
+        <h2>Dr. {{ doctorData.fullName || 'Unknown' }}</h2>
+        <span class="role-badge">Specialization Specialist (ID: {{ doctorData.specializationId || 'N/A' }})</span>
+      </div>
+      
+      <div class="info-grid">
+        <div class="info-item styled-card">
+          <div class="info-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          </div>
+          <div class="info-text">
+            <span class="info-label">Doctor ID Reference</span>
+            <span class="info-value">#{{ doctorData.doctorId || 'N/A' }}</span>
+          </div>
+        </div>
+        
+        <div class="info-item styled-card">
+          <div class="info-icon" style="color: var(--color-secondary); background: rgba(14, 165, 233, 0.1);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          </div>
+          <div class="info-text">
+            <span class="info-label">System Username</span>
+            <span class="info-value">{{ authUsername || 'N/A' }}</span>
+          </div>
+        </div>
+        
+        <div class="info-item styled-card">
+          <div class="info-icon" style="color: #F59E0B; background: rgba(245, 158, 11, 0.1);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <div class="info-text">
+            <span class="info-label">Years of Experience</span>
+            <span class="info-value">{{ doctorData.experience || 0 }} Years</span>
+          </div>
+        </div>
+        
+        <div class="info-item styled-card">
+          <div class="info-icon" style="color: var(--color-success); background: rgba(16, 185, 129, 0.1);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          </div>
+          <div class="info-text">
+            <span class="info-label">Standard Consult Fee</span>
+            <span class="info-value">{{ (doctorData.consultationFee || 0) | currency:'USD':'symbol':'1.2-2' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

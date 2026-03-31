@@ -1,0 +1,147 @@
+<div class="inventory-container">
+  <!-- Dynamic Background Elements -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="header-section">
+    <div class="title-group">
+      <h1>Diagnostic Catalog</h1>
+      <p>Manage clinic diagnostics, descriptions, and test pricing</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-box glass-panel">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Search diagnostics..."
+          aria-label="Search diagnostics">
+      </div>
+      <button class="btn-add premium-btn" (click)="openAddModal()">
+        <i class="fas fa-plus"></i>
+        <span>Issue New Test</span>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p>Loading diagnostic data...</p>
+  </div>
+
+  <div *ngIf="!loading" class="inventory-grid">
+    <div class="medicine-card glass-panel" *ngFor="let test of filteredTests; let i = index" [style.--i]="i">
+      <div class="card-header">
+        <span class="med-type-badge">Laboratory</span>
+        <span class="status-badge" [ngClass]="getPriceClass(test.price)">
+          {{ getPriceTier(test.price) }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <h3 class="med-name">{{ test.testName }}</h3>
+        <p class="med-description" *ngIf="test.description">{{ test.description }}</p>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">Category</span>
+            <span class="stat-value">Diag Test</span>
+          </div>
+          <div class="stat-item text-right">
+            <span class="stat-label">Unit Price</span>
+            <span class="stat-value price">₹{{ test.price | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="update-section glass-panel-sm">
+          <label>Update Price Point</label>
+          <div class="input-group">
+            <input type="number" #priceInput [value]="test.price" (keyup.enter)="updatePrice(test, priceInput.value)">
+            <button class="btn-update-small" (click)="updatePrice(test, priceInput.value)">SET</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredTests.length === 0" class="empty-state animate-fade-in">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-microscope"></i>
+    </div>
+    <h2>No Diagnostics Found</h2>
+    <p>We couldn't find any lab tests matching "{{ searchTerm }}".</p>
+    <button class="btn btn-primary premium-btn" (click)="searchTerm = ''">Clear Search</button>
+  </div>
+</div>
+
+<!-- Clinical Toasts -->
+<div class="toast-container">
+  <div *ngFor="let toast of toasts" class="toast-item glass-panel animate-toast-in" 
+       [ngClass]="'toast-' + toast.type">
+    <div class="toast-icon">
+      <i class="fas" [ngClass]="{
+        'fa-check-circle': toast.type === 'success',
+        'fa-exclamation-triangle': toast.type === 'warning',
+        'fa-times-circle': toast.type === 'error'
+      }"></i>
+    </div>
+    <div class="toast-message">{{ toast.message }}</div>
+    <button class="toast-close" (click)="removeToast(toast.id)">&times;</button>
+    <div class="toast-progress"></div>
+  </div>
+</div>
+
+<!-- Add Diagnostic Modal Overlay -->
+<div class="modal-overlay" *ngIf="showAddModal" (click)="closeAddModal()">
+  <div class="modal-content glass-panel animate-modal-in" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Register Diagnostic</h2>
+      <button class="close-btn" (click)="closeAddModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <form #testForm="ngForm" (ngSubmit)="onSubmitTest()" class="med-form">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Diagnostic Name <span class="required">*</span></label>
+            <input type="text" [(ngModel)]="newTest.testName" name="name" #name="ngModel" required minlength="2"
+              pattern="^[a-zA-Z0-9 ]*$"
+              [class.is-invalid]="name.invalid && (name.dirty || name.touched)"
+              placeholder="e.g., Complete Blood Count (CBC)">
+            <div class="invalid-feedback" *ngIf="name.invalid && (name.dirty || name.touched)">
+              <span *ngIf="name.errors?.['required']">Diagnostic name is required.</span>
+              <span *ngIf="name.errors?.['pattern']">Special characters are not allowed.</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Test Price (₹) <span class="required">*</span></label>
+            <input type="number" [(ngModel)]="newTest.price" name="price" #price="ngModel" required min="0.01" 
+              [class.is-invalid]="price.invalid && (price.dirty || price.touched)" placeholder="0.00">
+            <div class="invalid-feedback" *ngIf="price.invalid && (price.dirty || price.touched)">
+              Valid Test Price is required.
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Clinical Description (Optional)</label>
+            <textarea [(ngModel)]="newTest.description" name="desc" #desc="ngModel" maxlength="500"
+              placeholder="Add specific instructions or diagnostic metrics..." rows="3"></textarea>
+            <div class="char-count">{{ newTest.description ? newTest.description.length : 0 }}/500</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn-submit premium-btn" [disabled]="isSubmitting || testForm.invalid">
+            <i class="fas" [ngClass]="isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
+            <span>{{ isSubmitting ? 'Issuing...' : 'Complete Registration' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

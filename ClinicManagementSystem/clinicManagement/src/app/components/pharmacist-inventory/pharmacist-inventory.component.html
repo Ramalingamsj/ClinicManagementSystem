@@ -1,0 +1,167 @@
+<div class="inventory-container">
+  <!-- Dynamic Background Elements -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="header-section">
+    <div class="title-group">
+      <h1>Medicine Inventory</h1>
+      <p>Manage clinic-wide pharmaceutical stock and register new medications</p>
+    </div>
+
+    <div class="header-actions">
+      <div class="search-box glass-panel">
+        <i class="fas fa-search search-icon"></i>
+        <input type="text" [(ngModel)]="searchTerm" placeholder="Search medicines by name or type..."
+          aria-label="Search medicines">
+      </div>
+      <button class="btn-add premium-btn" (click)="openAddModal()">
+        <i class="fas fa-plus"></i>
+        <span>Add New Medicine</span>
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loader-container">
+    <div class="pulse-loader"></div>
+    <p>Loading inventory data...</p>
+  </div>
+
+  <div *ngIf="!loading" class="inventory-grid">
+    <div class="medicine-card glass-panel" *ngFor="let med of filteredMedicines; let i = index" [style.--i]="i">
+      <div class="card-header">
+        <span class="med-type-badge">{{ med.medicineType || 'Tablet' }}</span>
+        <span class="status-badge" [ngClass]="getStatusClass(med.stockQuantity)">
+          {{ getStockStatus(med.stockQuantity) }}
+        </span>
+      </div>
+
+      <div class="card-body">
+        <h3 class="med-name">{{ med.medicineName }}</h3>
+        <p class="med-description" *ngIf="med.description">{{ med.description }}</p>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">Stock Units</span>
+            <span class="stat-value" [ngClass]="{'low-stock': med.stockQuantity < 20}">{{ med.stockQuantity }}</span>
+          </div>
+          <div class="stat-item text-right">
+            <span class="stat-label">Unit Price</span>
+            <span class="stat-value price">₹{{ med.price | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="update-section glass-panel-sm">
+          <label>Inventory Refill (Add Units)</label>
+          <div class="input-group">
+            <input type="number" #qtyInput placeholder="Qty to add..." (keyup.enter)="updateStock(med, qtyInput.value); qtyInput.value = ''">
+            <button class="btn-update-small" (click)="updateStock(med, qtyInput.value); qtyInput.value = ''">ADD</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && filteredMedicines.length === 0" class="empty-state animate-fade-in">
+    <div class="empty-icon glass-panel">
+      <i class="fas fa-pills"></i>
+    </div>
+    <h2>No Medicines Found</h2>
+    <p>We couldn't find any medications matching "{{ searchTerm }}".</p>
+    <button class="btn btn-primary premium-btn" (click)="searchTerm = ''">Clear Search</button>
+  </div>
+</div>
+
+<!-- Premium Clinical Toast Notifications -->
+<div class="toast-container">
+  <div *ngFor="let toast of toasts" class="toast-item glass-panel animate-toast-in" [ngClass]="'toast-' + toast.type">
+    <div class="toast-icon">
+      <i class="fas" [ngClass]="{
+        'fa-check-circle': toast.type === 'success',
+        'fa-exclamation-triangle': toast.type === 'warning',
+        'fa-times-circle': toast.type === 'error'
+      }"></i>
+    </div>
+    <div class="toast-message">{{ toast.message }}</div>
+    <button class="toast-close" (click)="removeToast(toast.id)">&times;</button>
+    <div class="toast-progress"></div>
+  </div>
+</div>
+
+<!-- Add Medicine Modal Overlay -->
+<div class="modal-overlay" *ngIf="showAddModal" (click)="closeAddModal()">
+  <div class="modal-content glass-panel animate-modal-in" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Register New Medicine</h2>
+      <button class="close-btn" (click)="closeAddModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <form #medForm="ngForm" (ngSubmit)="onSubmitMedicine()" class="med-form">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label>Medicine Name <span class="required">*</span></label>
+            <input type="text" [(ngModel)]="newMed.medicineName" name="name" #name="ngModel" required minlength="2"
+              maxlength="100" pattern="^[a-zA-Z][a-zA-Z0-9 ]*$"
+              [class.is-invalid]="name.invalid && (name.dirty || name.touched)"
+              placeholder="Enter medicine name (must start with a letter)...">
+            <div class="invalid-feedback" *ngIf="name.invalid && (name.dirty || name.touched)">
+              <span *ngIf="name.errors?.['required']">Medicine name is required.</span>
+              <span *ngIf="name.errors?.['minlength']">Name must be at least 2 characters.</span>
+              <span *ngIf="name.errors?.['pattern']">Name must start with a letter and contain no special
+                characters.</span>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label>Category <span class="required">*</span></label>
+            <select [(ngModel)]="newMed.medicineType" name="type" required #type="ngModel"
+              [class.is-invalid]="type.invalid && (type.dirty || type.touched)">
+              <option *ngFor="let t of medicineTypes" [value]="t">{{ t }}</option>
+            </select>
+          </div>
+
+          <div class="form-group flex-1">
+            <label>Unit Price (₹) <span class="required">*</span></label>
+            <input type="number" [(ngModel)]="newMed.price" name="price" #price="ngModel" required min="0.01"
+              max="100000" [class.is-invalid]="price.invalid && (price.dirty || price.touched)" placeholder="0.00">
+            <div class="invalid-feedback" *ngIf="price.invalid && (price.dirty || price.touched)">
+              <span *ngIf="price.errors?.['required']">Price is required.</span>
+              <span *ngIf="price.errors?.['min']">Price must be > 0.</span>
+              <span *ngIf="price.errors?.['max']">Limit is 100000.</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Initial Stock Level</label>
+            <input type="number" [(ngModel)]="newMed.stockQuantity" name="stock" #stock="ngModel" min="0" max="1000"
+              [class.is-invalid]="stock.invalid && (stock.dirty || stock.touched)" placeholder="0">
+            <div class="invalid-feedback" *ngIf="stock.invalid && (stock.dirty || stock.touched)">
+              <span *ngIf="stock.errors?.['max']">Limit is 1000 units.</span>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>Description (Optional)</label>
+            <textarea [(ngModel)]="newMed.description" name="desc" #desc="ngModel" maxlength="500"
+              placeholder="Add usage details or warnings..." rows="3"></textarea>
+            <div class="char-count">{{ newMed.description ? newMed.description.length : 0 }}/500</div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-secondary" (click)="closeAddModal()">Cancel</button>
+          <button type="submit" class="btn-submit premium-btn" [disabled]="isSubmitting || medForm.invalid">
+            <i class="fas" [ngClass]="isSubmitting ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
+            <span>{{ isSubmitting ? 'Registering...' : 'Register Medicine' }}</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

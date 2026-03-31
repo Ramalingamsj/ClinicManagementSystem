@@ -2,6 +2,8 @@ using ClinicManagementSystem.Models;
 using ClinicManagementSystem.Service;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace ClinicManagementSystem.Controllers
 {
@@ -47,6 +49,14 @@ namespace ClinicManagementSystem.Controllers
             return Ok(result);
         }
 
+        [HttpGet("GetAppointmentById/{appointmentId}")]
+        public async Task<IActionResult> GetAppointmentById(int appointmentId)
+        {
+            var result = await _doctorService.GetAppointmentByIdService(appointmentId);
+            if (result == null) return NotFound("Appointment not found");
+            return Ok(result);
+        }
+
         [HttpPost("AddMedicine/{consultationId}")]
         public async Task<IActionResult> AddMedicine(int consultationId, [FromBody] PatientMedicine medicine)
         {
@@ -71,6 +81,28 @@ namespace ClinicManagementSystem.Controllers
             return Ok(result);
         }
 
+        [HttpGet("GetConsultationByAppointment/{appointmentId}")]
+        public async Task<IActionResult> GetConsultationByAppointment(int appointmentId)
+        {
+            var result = await _doctorService.GetConsultationByAppointmentService(appointmentId);
+            if (result == null) return NotFound("No existing consultation found for this appointment.");
+            return Ok(result);
+        }
+
+        [HttpGet("GetAllMedicines")]
+        public async Task<IActionResult> GetAllMedicines()
+        {
+            var result = await _doctorService.GetAllMedicinesService();
+            return Ok(result);
+        }
+
+        [HttpGet("GetAllLabTests")]
+        public async Task<IActionResult> GetAllLabTests()
+        {
+            var result = await _doctorService.GetAllLabTestsService();
+            return Ok(result);
+        }
+
         [HttpPut("editPrescription/{patientMedicineId}")]
         public async Task<IActionResult> EditPrescription(int patientMedicineId, [FromBody] PatientMedicine medicine)
         {
@@ -85,7 +117,7 @@ namespace ClinicManagementSystem.Controllers
         {
             var result = await _doctorService.DeletePrescriptionService(patientMedicineId);
             if (!result) return NotFound("Prescription not found.");
-            return Ok("Prescription deleted successfully.");
+            return Ok(new { message = "Prescription deleted successfully." });
         }
 
         [HttpPut("editLabTest/{patientLabtestId}")]
@@ -102,7 +134,15 @@ namespace ClinicManagementSystem.Controllers
         {
             var result = await _doctorService.DeleteLabTestService(patientLabtestId);
             if (!result) return NotFound("Lab test not found.");
-            return Ok("Lab test deleted successfully.");
+            return Ok(new { message = "Lab test deleted successfully." });
+        }
+
+        [HttpGet("getDoctorHistory/{doctorId}")]
+        public async Task<IActionResult> GetDoctorHistory(int doctorId)
+        {
+            var result = await _doctorService.GetDoctorHistoryService(doctorId);
+            return Ok(result);
         }
     }
 }
+

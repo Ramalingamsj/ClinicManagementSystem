@@ -1,0 +1,187 @@
+<div class="history-container">
+  <!-- Dynamic Background Elements -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+  <div class="grid-overlay"></div>
+
+  <div class="header-section">
+    <div class="title-group">
+      <h1>Pharmacy Records</h1>
+      <p>Manage and track all generated medicine invoices and fulfillment history</p>
+    </div>
+    <div class="search-box glass-panel">
+      <i class="fas fa-search search-icon"></i>
+      <input type="text" [(ngModel)]="searchTerm" placeholder="Search by Patient Name, ID or Medicine..."
+        aria-label="Search pharmacy records">
+    </div>
+  </div>
+
+  <!-- Medicines History Content (Now the only view) -->
+  <div class="tab-content animate-fade-in">
+    <div *ngIf="loadingHistory" class="loader-container">
+      <div class="pulse-loader"></div>
+      <p>Loading issuance history...</p>
+    </div>
+
+    <div *ngIf="historyError" class="error-panel animate-bounce-in">
+      <i class="fas fa-exclamation-triangle"></i>
+      <p>{{ historyError }}</p>
+      <button class="btn btn-outline" (click)="fetchHistory()">Try Again</button>
+    </div>
+
+    <div *ngIf="!loadingHistory && !historyError" class="history-grid">
+      <div class="history-card glass-panel" *ngFor="let consult of filteredMedicineHistory">
+        <div class="card-header">
+          <span class="bill-id">CONSULT #{{ consult.consultationId }}</span>
+          <span class="status-badge status-paid">FULFILLED</span>
+        </div>
+
+        <div class="card-body">
+          <div class="patient-line">
+            <div class="avatar-sm">
+              {{ (consult.patientName || 'P')?.charAt(0) }}
+            </div>
+            <div class="patient-info">
+              <h3 class="patient-name">{{ consult.patientName || 'Unknown Patient' }}</h3>
+              <span class="consult-ref">Total Medicines: {{ consult.medicines?.length || 0 }}</span>
+            </div>
+          </div>
+
+          <div class="total-amount-row glass-panel-sm" *ngIf="consult.totalAmount > 0">
+            <span class="total-label">Total Amount</span>
+            <span class="total-value">₹{{ consult.totalAmount | number:'1.2-2' }}</span>
+          </div>
+
+          <!-- Mini List of Medicines -->
+          <div class="medicine-history-list glass-panel-sm">
+            <div class="med-history-item" *ngFor="let m of consult.medicines">
+              <div class="med-history-info">
+                <i class="fas fa-pills med-icon-sm"></i>
+                <div class="med-main-info">
+                  <span class="med-name-sm">{{ m.medicineName || 'Medicine' }}</span>
+                  <span class="med-meta-sm">{{ m.dosage }} • {{ m.frequency }}x Daily</span>
+                </div>
+              </div>
+              <div class="med-qty-badge">
+                Qty: {{ m.quantity }}
+              </div>
+            </div>
+          </div>
+
+          <div class="details-row mt-4">
+            <div class="detail-item">
+              <label>Issuance Ref</label>
+              <span>Ref #{{ consult.consultationId }}</span>
+            </div>
+            <div class="detail-item text-right">
+              <label>Fulfillment Date</label>
+              <span>{{ (consult.createdAt || consult.appointmentDate | date:'MMM d, y') || 'N/A' }}</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-footer" style="display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn-download" style="width: 100%;" (click)="printBill(consult)">
+            <i class="fas fa-file-invoice"></i>
+            <span>Download PDF Bill</span>
+          </button>
+          
+          <button class="btn-sms" style="width: 100%;" 
+            [disabled]="sendingSmsMap[consult.consultationId]"
+            (click)="sendSms(consult)">
+            <i class="fas" [ngClass]="sendingSmsMap[consult.consultationId] ? 'fa-spinner fa-spin' : 'fa-paper-plane'"></i>
+            <span>{{ sendingSmsMap[consult.consultationId] ? 'Sending...' : 'Send Bill via SMS' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div *ngIf="!loadingHistory && !historyError && filteredMedicineHistory.length === 0" class="empty-state animate-fade-in">
+      <div class="empty-icon glass-panel">
+        <i class="fas fa-pills"></i>
+      </div>
+      <h2>No Issuance Records</h2>
+      <p>We couldn't find any medicine records matching your search.</p>
+      <button class="btn btn-primary premium-btn" (click)="searchTerm = ''">Clear Search</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Layout (Hidden in UI) -->
+<div class="print-layout" id="print-section" *ngIf="selectedRecord">
+  <div class="print-header">
+    <div class="clinic-info">
+      <h2 style="color: #4f46e5; margin-bottom: 5px;">ClinicSys Medical Center</h2>
+      <p>123 Medical Plaza, Health Street, Elite District</p>
+      <p>Phone: +1 (234) 567-890 | care@clinicsys.com</p>
+    </div>
+    <div class="invoice-meta" style="text-align: right;">
+      <h1 style="font-size: 32px; color: #1e293b; margin: 0;">INVOICE</h1>
+      <p><strong>Date:</strong> {{ today | date:'mediumDate' }}</p>
+      <p><strong>Invoice ID:</strong> #INV-{{ selectedRecord.billId || selectedRecord.consultationId }}</p>
+      <p><strong>Status:</strong> <span style="color: #10b981; font-weight: 700;">PAID / FULFILLED</span></p>
+    </div>
+  </div>
+
+  <div class="print-patient"
+    style="margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 8px; display: flex; justify-content: space-between;">
+    <div>
+      <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Patient Information</h3>
+      <p><strong>Name:</strong> {{ selectedRecord.patientName }}</p>
+      <p><strong>Patient REF:</strong> #P-{{ selectedRecord.consultationId || selectedRecord.billId }}</p>
+    </div>
+    <div style="text-align: right;">
+      <h3 style="margin: 0 0 10px 0; color: #4f46e5;">Session Details</h3>
+      <p><strong>Consultation ID:</strong> #{{ selectedRecord.consultationId || 'Wait' }}</p>
+      <p><strong>Receipt ID:</strong> #{{ selectedRecord.billId || 'N/A' }}</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 30px; margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 5px;">
+    Pharmaceutical Fulfillment Summary
+  </h3>
+
+  <table class="print-table" style="width: 100%; border-collapse: collapse;" *ngIf="selectedRecord.medicines">
+    <thead>
+      <tr style="background: #f1f5f9;">
+        <th style="padding: 12px; text-align: left; border-bottom: 2px solid #cbd5e1;">Medicine Item</th>
+        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Dosage</th>
+        <th style="padding: 12px; text-align: center; border-bottom: 2px solid #cbd5e1;">Quantity</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let med of selectedRecord.medicines">
+        <td style="padding: 12px; border-bottom: 1px solid #e2e8f0;">
+          <div style="font-weight: 700;">{{ med.medicineName }}</div>
+          <div style="font-size: 12px; color: #64748b;">{{ med.medicineType }}</div>
+        </td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ med.dosage }} • {{
+          med.frequency }}x Daily</td>
+        <td style="padding: 12px; text-align: center; border-bottom: 1px solid #e2e8f0;">{{ med.quantity }} Units</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!selectedRecord.medicines"
+    style="padding: 20px; border: 1px dashed #cbd5e1; border-radius: 8px; text-align: center; font-style: italic; color: #64748b;">
+    Pharmacy service fulfillment for consultation #{{ selectedRecord.consultationId }}
+  </div>
+
+  <div style="margin-top: 30px; display: flex; justify-content: flex-end;">
+    <div
+      style="padding: 15px 30px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 20px;">
+      <span style="font-weight: 700; color: #64748b; text-transform: uppercase; font-size: 12px;">Net Total Payable</span>
+      <span style="font-size: 24px; font-weight: 900; color: #4f46e5;">₹{{ selectedRecord.totalAmount | number:'1.2-2'
+        }}</span>
+    </div>
+  </div>
+
+  <div class="print-footer"
+    style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center;">
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Electronic generated invoice. No signature required.
+    </p>
+    <p style="font-weight: 700; color: #1e293b;">Thank you for visiting ClinicSys Medical Center!</p>
+  </div>
+</div>
